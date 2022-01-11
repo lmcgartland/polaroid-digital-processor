@@ -1,5 +1,5 @@
 ### This is a work in progress!
-After scanning hundreds of Polaroids manually and doing lightweight post-processing in the photos app (rotation/crop/sharpening), I figured it was time to automate the process. This script is the first at utilizing OpenCV to automatically extract the Polaroids from a single scanned image file. If you have any issues, please open an issue on Github and I'll do my best to help resolve it. PRs are also welcome!
+After scanning hundreds of Polaroids manually and doing lightweight post-processing in the photos app (rotation/crop/sharpening), I figured it was time to automate the process. This script is my first try at utilizing OpenCV to automatically extract the Polaroids from a single scanned image file. If you have any issues, please open an issue on Github and I'll do my best to help resolve it. PRs are also welcome!
 
 ## Getting started
 **Requirements: Python 3**
