@@ -74,7 +74,7 @@
 		cv.threshold(gray, gray, 150, 255, cv.THRESH_BINARY);
 
 		// Erosion and Dilation to remove noise and get background
-		let M = cv.Mat.ones(14, 14, cv.CV_8U); // Increase the size of the structuring element
+		let M = cv.Mat.ones(20, 20, cv.CV_8U); // Increase the size of the structuring element
 		cv.erode(gray, gray, M);
 		cv.dilate(gray, opening, M);
 
@@ -83,7 +83,7 @@
 		cv.normalize(distTrans, distTrans, 1, 0, cv.NORM_INF);
 
 		// Get foreground
-		cv.threshold(distTrans, polaroidsFg, 0.8 * 1, 255, cv.THRESH_BINARY);
+		cv.threshold(distTrans, polaroidsFg, 0.85 * 1, 255, cv.THRESH_BINARY);
 		polaroidsFg.convertTo(polaroidsFg, cv.CV_8U, 1, 0);
 		cv.subtract(opening, polaroidsFg, unknown); // Use 'opening' instead of 'polaroidsBg'
 
@@ -129,10 +129,10 @@
 			let area = cv.contourArea(cnt);
 
 			// Discard the large and small contours based on area being larger or smaller than the expected polaroid size
-			// 10% tolerance
+			// 20% tolerance
 			if (
-				area > EXPECTED_POLAROID_SURFACE_AREA * 0.9 &&
-				area < EXPECTED_POLAROID_SURFACE_AREA * 1.1
+				area > EXPECTED_POLAROID_SURFACE_AREA * 0.8 &&
+				area < EXPECTED_POLAROID_SURFACE_AREA * 1.2
 			) {
 				let rect = cv.minAreaRect(cnt);
 				// Make sure the rect is the right way up
@@ -297,6 +297,7 @@
 			extractedPolaroidPoints.delete();
 			extractedPolaroidPoints2.delete();
 			M.delete();
+			sharpenFilter.delete();
 		}
 	}
 
