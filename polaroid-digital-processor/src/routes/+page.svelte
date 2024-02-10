@@ -2,17 +2,23 @@
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 
+	// Is OpenCV ready?
 	let isReady = false;
+
 	let input: HTMLInputElement;
 	let image: string | ArrayBuffer | null;
 	let srcImage: string | ArrayBuffer | null;
 
+	let fileOutputCanvas: HTMLCanvasElement;
+
+	// Data for extracted polaroids
+	let extractedPolaroids: string[] = [];
+
 	// Configure the matrix of how polaroids are arranged in image
 	let polaroidsWide = 2;
 
-	let polaroidDetectionWidth = 500;
-
-	const EXPECTED_POLAROID_SURFACE_AREA = polaroidDetectionWidth * 440;
+	const POLAROID_DETECTION_WIDTH = 500;
+	const EXPECTED_POLAROID_SURFACE_AREA = POLAROID_DETECTION_WIDTH * 440;
 
 	onMount(() => {
 		if (browser && 'cv' in window) {
@@ -25,8 +31,6 @@
 	});
 
 	function processImage() {
-		// Assumes using 600px polaroid
-
 		// Opencv reads from the DOM element with the id "preview"
 		let cv = window.cv;
 		let src = cv.imread('inputImage');
@@ -41,8 +45,23 @@
 
 		// Image pre-processing
 		// Resize the image based on how many polaroids are in the image
-		let newWidth = polaroidDetectionWidth * polaroidsWide;
+		let newWidth = POLAROID_DETECTION_WIDTH * polaroidsWide;
 		let newHeight = (newWidth / src.cols) * src.rows;
+
+		// Save the ratio the image was resized by on each axis
+		const resizeWidthRatio = newWidth / src.cols;
+		const resizeHeightRatio = newHeight / src.rows;
+
+		console.log('Original Image Size: ', src.cols, src.rows);
+		console.log('Resized Image Size: ', newWidth, newHeight);
+		console.log('Resize Ratios: ', resizeWidthRatio, resizeHeightRatio);
+		// Check that when resize ratios are applied to new image size, the original values are obtained
+		console.log(
+			'Original Image Size: ',
+			newWidth / resizeWidthRatio,
+			newHeight / resizeHeightRatio
+		);
+
 		cv.resize(src, src, new cv.Size(newWidth, newHeight), 0, 0, cv.INTER_AREA);
 		// Blur the image
 		cv.medianBlur(src, src, 7);
@@ -63,7 +82,7 @@
 		cv.normalize(distTrans, distTrans, 1, 0, cv.NORM_INF);
 
 		// Get foreground
-		cv.threshold(distTrans, polaroidsFg, 0.7 * 1, 255, cv.THRESH_BINARY);
+		cv.threshold(distTrans, polaroidsFg, 0.8 * 1, 255, cv.THRESH_BINARY);
 		polaroidsFg.convertTo(polaroidsFg, cv.CV_8U, 1, 0);
 		cv.subtract(opening, polaroidsFg, unknown); // Use 'opening' instead of 'polaroidsBg'
 
@@ -101,12 +120,12 @@
 		let hierarchy = new cv.Mat();
 		cv.findContours(markers, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE);
 
+		let polaroids = [];
+
 		// Loop through the contours and find the bounding rectangles
 		for (let i = 0; i < contours.size(); ++i) {
 			let cnt = contours.get(i);
-
 			let area = cv.contourArea(cnt);
-			console.log(area);
 
 			// Discard the large and small contours based on area being larger or smaller than the expected polaroid size
 			// 10% tolerance
@@ -115,45 +134,55 @@
 				area < EXPECTED_POLAROID_SURFACE_AREA * 1.1
 			) {
 				let rect = cv.minAreaRect(cnt);
-
-				let x = rect.x;
-				let y = rect.y;
-				let w = rect.width;
-				let h = rect.height;
+				// Make sure the rect is the right way up
+				if (rect.size.width < rect.size.height) {
+					rect.angle += 90;
+					let temp = rect.size.width;
+					rect.size.width = rect.size.height;
+					rect.size.height = temp;
+				}
 
 				// Get the four corner points of the rectangle
 				let points = cv.RotatedRect.points(rect);
 
-				// Draw the rectangle
-				for (let j = 0; j < 4; j++) {
-					cv.line(src, points[j], points[(j + 1) % 4], [0, 255, 0, 255], 2, cv.LINE_AA, 0);
+				// Check that the center of the rectangle is not inside any of the previous rectangles
+				let center = rect.center;
+				let isInside = false;
+				for (let j = 0; j < polaroids.length; j++) {
+					let polaroid = polaroids[j];
+					let rect = polaroid.rect;
+					if (
+						center.x > rect.center.x - rect.size.width / 2 &&
+						center.x < rect.center.x + rect.size.width / 2 &&
+						center.y > rect.center.y - rect.size.height / 2 &&
+						center.y < rect.center.y + rect.size.height / 2
+					) {
+						isInside = true;
+						break;
+					}
+				}
+
+				if (!isInside) {
+					let polaroid = {
+						rect: rect,
+						points: points
+					};
+
+					// Clone the data
+					polaroid = JSON.parse(JSON.stringify(polaroid));
+
+					polaroids.push(polaroid);
+
+					// Draw the rectangle
+					for (let j = 0; j < 4; j++) {
+						cv.line(src, points[j], points[(j + 1) % 4], [0, 255, 0, 255], 2, cv.LINE_AA, 0);
+					}
 				}
 			}
 		}
 
 		// Draw the rectangles on the image
 		cv.imshow('canvasOutput', src);
-
-		// let cnt = contours.get(0);
-		// let rect = cv.boundingRect(cnt);
-		// let x = rect.x;
-		// let y = rect.y;
-		// let w = rect.width;
-		// let h = rect.height;
-
-		// // Crop the image
-		// let cropped = src.roi(new cv.Rect(x, y, w, h));
-		// cv.imshow('canvasOutput', cropped);
-
-		// // Extract the cropped image from the original, unblurred image
-		// let img = document.getElementById('preview') as HTMLImageElement;
-		// let canvas = document.createElement('canvas');
-		// canvas.width = w;
-		// canvas.height = h;
-		// let ctx = canvas.getContext('2d');
-		// ctx?.drawImage(img, x, y, w, h, 0, 0, w, h);
-		// let dataURL = canvas.toDataURL('image/png');
-		// image = dataURL;
 
 		// Memory cleanup
 		src.delete();
@@ -166,6 +195,96 @@
 		unknown.delete();
 		markers.delete();
 		M.delete();
+
+		// Extract each polaroid from the original image
+		for (let i = 0; i < polaroids.length; i++) {
+			let polaroid = polaroids[i];
+
+			// Apply the resize ratios to the polaroid rect and points to get the original image coordinates
+			polaroid.rect.size.width /= resizeWidthRatio;
+			polaroid.rect.size.height /= resizeHeightRatio;
+			polaroid.rect.center.x /= resizeWidthRatio;
+			polaroid.rect.center.y /= resizeHeightRatio;
+
+			for (let j = 0; j < 4; j++) {
+				polaroid.points[j].x /= resizeWidthRatio;
+				polaroid.points[j].y /= resizeHeightRatio;
+			}
+
+			// Create a new cv Mat of the original input image
+			let originalImage = cv.imread('inputImage');
+			// Extract the polaroid from the original image using the points as the four corners of the polaroid
+			let extractedPolaroid = new cv.Mat();
+			let extractedPolaroidPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
+				polaroid.points[0].x,
+				polaroid.points[0].y,
+				polaroid.points[1].x,
+				polaroid.points[1].y,
+				polaroid.points[2].x,
+				polaroid.points[2].y,
+				polaroid.points[3].x,
+				polaroid.points[3].y
+			]);
+
+			// Create a cv Rotated Rect from the points
+			let extractedPolaroidRect = cv.minAreaRect(extractedPolaroidPoints);
+
+			// if the rect is not the right way up, rotate it
+			if (extractedPolaroidRect.size.width > extractedPolaroidRect.size.height) {
+				extractedPolaroidRect.angle += 90;
+				let temp = extractedPolaroidRect.size.width;
+				extractedPolaroidRect.size.width = extractedPolaroidRect.size.height;
+				extractedPolaroidRect.size.height = temp;
+			}
+
+			// Get the width and height of this rect
+			let extractedPolaroidWidth = extractedPolaroidRect.size.width;
+			let extractedPolaroidHeight = extractedPolaroidRect.size.height;
+
+			console.log('Extracted Polaroid Width: ', extractedPolaroidWidth);
+
+			// Create new points for the extracted polaroid using the width and height, subtracting 1% of the width or height from each edge to remove any border
+			const edgeBuffer = 0.01;
+			const widthEdgeBuffer = extractedPolaroidWidth * edgeBuffer;
+			const heightEdgeBuffer = extractedPolaroidHeight * edgeBuffer;
+			let extractedPolaroidPoints2 = cv.matFromArray(4, 1, cv.CV_32FC2, [
+				0 - widthEdgeBuffer,
+				0 - heightEdgeBuffer,
+				extractedPolaroidWidth + widthEdgeBuffer,
+				0 - heightEdgeBuffer,
+				extractedPolaroidWidth + widthEdgeBuffer,
+				extractedPolaroidHeight + heightEdgeBuffer,
+				0 - widthEdgeBuffer,
+				extractedPolaroidHeight + heightEdgeBuffer
+			]);
+
+			// Create a transformation matrix to transform the extracted polaroid points to the new points
+			let M = cv.getPerspectiveTransform(extractedPolaroidPoints, extractedPolaroidPoints2);
+			// Warp the original image using the transformation matrix
+			cv.warpPerspective(
+				originalImage,
+				extractedPolaroid,
+				M,
+				new cv.Size(extractedPolaroidWidth, extractedPolaroidHeight)
+			);
+
+			// Draw the extracted polaroid with the warp applied to the canvas
+			fileOutputCanvas.width = extractedPolaroidWidth;
+			fileOutputCanvas.height = extractedPolaroidHeight;
+			cv.imshow('fileOutputCanvas', extractedPolaroid);
+
+			let dataURL = fileOutputCanvas.toDataURL('image/png');
+			extractedPolaroids.push(dataURL);
+
+			extractedPolaroids = extractedPolaroids;
+
+			// Memory cleanup
+			originalImage.delete();
+			extractedPolaroid.delete();
+			extractedPolaroidPoints.delete();
+			extractedPolaroidPoints2.delete();
+			M.delete();
+		}
 	}
 
 	function onChange() {
@@ -195,8 +314,8 @@
 </script>
 
 {#if isReady}
-	<div class="w-full h-screen flex items-center justify-center">
-		<div>
+	<div class="w-full h-screen flex flex-col items-center justify-center">
+		<section>
 			{#if image}
 				<div class="flex flex-row">
 					<img id="preview" src={image} alt="Uploaded Image" />
@@ -207,14 +326,29 @@
 				<br />
 				<input bind:this={input} on:change={onChange} type="file" accept="image/*" />
 			{/if}
-		</div>
+		</section>
+
+		<section>
+			{#if extractedPolaroids.length > 0}
+				<div class="flex flex-row">
+					{#each extractedPolaroids as polaroid, i}
+						<img class="w-12 h-auto m-2" src={polaroid} alt="Polaroid" />
+					{/each}
+				</div>
+				<button>Download images</button>
+			{/if}
+		</section>
 	</div>
 {:else}
 	<div class="w-full h-screen flex items-center justify-center">OpenCV is loading...</div>
 {/if}
 
+<!-- HIDDEN ELEMENTS -->
 <!-- svelte-ignore a11y-missing-attribute -->
 <img id="inputImage" src={image ? image : ''} />
+<canvas bind:this={fileOutputCanvas} id="fileOutputCanvas" />
+
+<!-- END HIDDEN ELEMENTS -->
 
 <style>
 	#preview,
@@ -225,7 +359,11 @@
 		height: auto;
 		object-fit: contain;
 	}
+
 	#inputImage {
+		display: none;
+	}
+	#fileOutputCanvas {
 		display: none;
 	}
 </style>
