@@ -12,6 +12,8 @@
 
 	let polaroidDetectionWidth = 500;
 
+	const EXPECTED_POLAROID_SURFACE_AREA = polaroidDetectionWidth * 440;
+
 	onMount(() => {
 		if (browser && 'cv' in window) {
 			isReady = true;
@@ -49,10 +51,10 @@
 		cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
 
 		// Thresholding to isolate Polaroids
-		cv.threshold(gray, gray, 180, 255, cv.THRESH_BINARY);
+		cv.threshold(gray, gray, 150, 255, cv.THRESH_BINARY);
 
 		// Erosion and Dilation to remove noise and get background
-		let M = cv.Mat.ones(12, 12, cv.CV_8U); // Increase the size of the structuring element
+		let M = cv.Mat.ones(14, 14, cv.CV_8U); // Increase the size of the structuring element
 		cv.erode(gray, gray, M);
 		cv.dilate(gray, opening, M);
 
@@ -102,26 +104,35 @@
 		// Loop through the contours and find the bounding rectangles
 		for (let i = 0; i < contours.size(); ++i) {
 			let cnt = contours.get(i);
-			let rect = cv.boundingRect(cnt);
 
-			// Discard small rectangles
-			if (rect.width < 100 || rect.height < 100) {
-				continue;
+			let area = cv.contourArea(cnt);
+			console.log(area);
+
+			// Discard the large and small contours based on area being larger or smaller than the expected polaroid size
+			// 10% tolerance
+			if (
+				area > EXPECTED_POLAROID_SURFACE_AREA * 0.9 &&
+				area < EXPECTED_POLAROID_SURFACE_AREA * 1.1
+			) {
+				let rect = cv.minAreaRect(cnt);
+
+				let x = rect.x;
+				let y = rect.y;
+				let w = rect.width;
+				let h = rect.height;
+
+				// Get the four corner points of the rectangle
+				let points = cv.RotatedRect.points(rect);
+
+				// Draw the rectangle
+				for (let j = 0; j < 4; j++) {
+					cv.line(src, points[j], points[(j + 1) % 4], [0, 255, 0, 255], 2, cv.LINE_AA, 0);
+				}
 			}
-			// Discard large rectangles
-			if (rect.width > 800 || rect.height > 800) {
-				continue;
-			}
-
-			let x = rect.x;
-			let y = rect.y;
-			let w = rect.width;
-			let h = rect.height;
-			cv.rectangle(src, new cv.Point(x, y), new cv.Point(x + w, y + h), [0, 255, 0, 255], 2);
-
-			// Draw the rectangles
-			cv.imshow('canvasOutput', src);
 		}
+
+		// Draw the rectangles on the image
+		cv.imshow('canvasOutput', src);
 
 		// let cnt = contours.get(0);
 		// let rect = cv.boundingRect(cnt);
