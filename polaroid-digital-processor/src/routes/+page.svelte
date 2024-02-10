@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import JSZip from 'jszip';
 	import { onMount } from 'svelte';
 
 	// Is OpenCV ready?
@@ -268,6 +269,18 @@
 				new cv.Size(extractedPolaroidWidth, extractedPolaroidHeight)
 			);
 
+			// Sharpen the polaroid
+			// Create a sharpen filter
+			let sharpenFilter = new cv.Mat.zeros(3, 3, cv.CV_32F);
+			sharpenFilter.floatPtr(1, 1)[0] = 5.0;
+			sharpenFilter.floatPtr(0, 1)[0] = -1.0;
+			sharpenFilter.floatPtr(2, 1)[0] = -1.0;
+			sharpenFilter.floatPtr(1, 0)[0] = -1.0;
+			sharpenFilter.floatPtr(1, 2)[0] = -1.0;
+
+			// Apply the sharpen filter to the polaroid
+			cv.filter2D(extractedPolaroid, extractedPolaroid, -1, sharpenFilter);
+
 			// Draw the extracted polaroid with the warp applied to the canvas
 			fileOutputCanvas.width = extractedPolaroidWidth;
 			fileOutputCanvas.height = extractedPolaroidHeight;
@@ -311,6 +324,30 @@
 			}
 		}
 	}
+
+	function downloadImages() {
+		// ZIP the images and download
+		const zip = new JSZip();
+		const folder = zip.folder('polaroids');
+		for (let i = 0; i < extractedPolaroids.length; i++) {
+			const dataURL = extractedPolaroids[i];
+			const base64 = dataURL.split(',')[1];
+
+			// Create file safe date time string
+			const date = new Date();
+			const dateString = date.toISOString().replace(/:/g, '-').replace(/\./g, '-');
+
+			folder?.file(`polaroid-${dateString}.png`, base64, { base64: true });
+		}
+
+		// Download the zip by clicking a link
+		zip.generateAsync({ type: 'blob' }).then(function (content) {
+			const link = document.createElement('a');
+			link.href = URL.createObjectURL(content);
+			link.download = 'polaroids.zip';
+			link.click();
+		});
+	}
 </script>
 
 {#if isReady}
@@ -335,7 +372,7 @@
 						<img class="w-12 h-auto m-2" src={polaroid} alt="Polaroid" />
 					{/each}
 				</div>
-				<button>Download images</button>
+				<button on:click={downloadImages}>Download images</button>
 			{/if}
 		</section>
 	</div>
