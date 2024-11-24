@@ -7,7 +7,7 @@
 	let isReady = false;
 
 	let input: HTMLInputElement;
-	let image: string | ArrayBuffer | null;
+	let previewImageData: string | undefined;
 	let srcImage: string | ArrayBuffer | null;
 
 	let fileOutputCanvas: HTMLCanvasElement;
@@ -24,11 +24,15 @@
 	onMount(() => {
 		if (browser && 'cv' in window) {
 			isReady = true;
-		} else {
-			window.addEventListener('opencv-ready', function (e) {
-				isReady = true;
-			});
 		}
+		window.addEventListener('opencv-ready', function (e) {
+			isReady = true;
+		});
+		window.addEventListener('load', function (e) {
+			if ('cv' in window) {
+				isReady = true;
+			}
+		});
 	});
 
 	function processImage() {
@@ -308,14 +312,16 @@
 			if (file) {
 				const reader = new FileReader();
 				reader.addEventListener('load', function () {
-					image = reader.result;
+					previewImageData = reader.result as string;
 
+					// NOTE - data url will not work with TIF files
 					// Create a new Image object
 					const img = new Image();
 					img.src = reader.result as string;
 
 					// Load the image into a canvas
 					img.onload = function () {
+						console.log('Processing Image...');
 						processImage();
 					};
 				});
@@ -354,9 +360,9 @@
 {#if isReady}
 	<div class="w-full h-screen flex flex-col items-center justify-center">
 		<section>
-			{#if image}
+			{#if previewImageData}
 				<div class="flex flex-row">
-					<img id="preview" src={image} alt="Uploaded Image" />
+					<img id="preview" src={previewImageData} alt="Uploaded Image" />
 					<canvas id="canvasOutput" />
 				</div>
 			{:else}
@@ -383,7 +389,7 @@
 
 <!-- HIDDEN ELEMENTS -->
 <!-- svelte-ignore a11y-missing-attribute -->
-<img id="inputImage" src={image ? image : ''} />
+<img id="inputImage" src={previewImageData ? previewImageData : ''} />
 <canvas bind:this={fileOutputCanvas} id="fileOutputCanvas" />
 
 <!-- END HIDDEN ELEMENTS -->
