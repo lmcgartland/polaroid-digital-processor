@@ -107,10 +107,12 @@ async function processImage(base64ImageData: string) {
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
 
     // Thresholding to isolate Polaroids
-    cv.threshold(gray, gray, 150, 255, cv.THRESH_BINARY);
+    cv.threshold(gray, gray, 100, 255, cv.THRESH_BINARY);
 
     // Erosion and Dilation to remove noise and get background
-    let M = cv.Mat.ones(20, 20, cv.CV_8U); // Increase the size of the structuring element
+
+    // Tweak the structuring element values!!
+    let M = cv.Mat.ones(10, 10, cv.CV_8U); // Increase the size of the structuring element
     cv.erode(gray, gray, M);
     cv.dilate(gray, opening, M);
 
@@ -119,7 +121,7 @@ async function processImage(base64ImageData: string) {
     cv.normalize(distTrans, distTrans, 1, 0, cv.NORM_INF);
 
     // Get foreground
-    cv.threshold(distTrans, polaroidsFg, 0.85 * 1, 255, cv.THRESH_BINARY);
+    cv.threshold(distTrans, polaroidsFg, 0.9 * 1, 255, cv.THRESH_BINARY);
     polaroidsFg.convertTo(polaroidsFg, cv.CV_8U, 1, 0);
     cv.subtract(opening, polaroidsFg, unknown); // Use 'opening' instead of 'polaroidsBg'
 
