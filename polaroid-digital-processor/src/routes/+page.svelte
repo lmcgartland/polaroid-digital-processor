@@ -18,7 +18,7 @@
 
 	onMount(() => {
 		worker.onmessage = (event: MessageEvent<WorkerMessageEvent>) => {
-			console.log('WORKER MESSAGE', event);
+			// console.log('WORKER MESSAGE', event);
 			switch (event.data.type) {
 				case 'WORKER READY':
 					isReady = true;
@@ -27,7 +27,6 @@
 					extractedPolaroids = event.data.extracted;
 					break;
 				case 'UPDATE PREVIEW':
-					console.log('UPDATE PREVIEW', event.data.preview);
 					const blob = event.data.preview;
 					previewImageData = URL.createObjectURL(blob);
 					break;
@@ -59,7 +58,7 @@
 		// ZIP the images and download
 		const zip = new JSZip();
 		const folder = zip.folder('polaroids');
-		console.log('EXTRACTED POLAROIDS', extractedPolaroids);
+		// console.log('EXTRACTED POLAROIDS', extractedPolaroids);
 		for (let i = 0; i < extractedPolaroids.length; i++) {
 			const blob = extractedPolaroids[i];
 
