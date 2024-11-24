@@ -1,9 +1,10 @@
 /// <reference lib="webworker" /> 
 
 import type { WorkerMessageEvent } from "./workerTypes";
+import type { OpenCV } from "@opencvjs/types";
 
 interface WorkerGlobalScope {
-    cv: any;
+    cv: typeof OpenCV;
 }
 
 /** We need to trick opencv in thinking we're in a normal web env. */
@@ -64,13 +65,12 @@ async function processImage(base64ImageData: string) {
     // Create a canvas element to draw the image on
     let canvasOutput = new OffscreenCanvas(300, 150);
 
-    // Opencv reads from the DOM element with the id "preview"
-    let cv = self.cv;
+    let cv: typeof OpenCV = self.cv;
 
     // Have cv read the image from memory without referencing the dom id
     let image = await getImageBitmapForImageData(base64ImageData);
+    //@ts-ignore
     let src = cv.imread(image);
-    console.log('Image Size: ', src.cols, src.rows);
     let dst = new cv.Mat();
     let gray = new cv.Mat();
     let opening = new cv.Mat();
@@ -310,7 +310,7 @@ async function processImage(base64ImageData: string) {
 
         // Sharpen the polaroid
         // Create a sharpen filter
-        let sharpenFilter = new cv.Mat.zeros(3, 3, cv.CV_32F);
+        let sharpenFilter: OpenCV.Mat = new cv.Mat.zeros(3, 3, cv.CV_32F);
         sharpenFilter.floatPtr(1, 1)[0] = 5.0;
         sharpenFilter.floatPtr(0, 1)[0] = -1.0;
         sharpenFilter.floatPtr(2, 1)[0] = -1.0;

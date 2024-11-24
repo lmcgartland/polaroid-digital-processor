@@ -10,6 +10,9 @@ dependencies:
     version: 3.10.1
 
 devDependencies:
+  '@opencvjs/types':
+    specifier: 4.10.0-release.4
+    version: 4.10.0-release.4
   '@sveltejs/adapter-auto':
     specifier: ^3.0.0
     version: 3.1.1(@sveltejs/kit@2.5.0)
@@ -343,6 +346,10 @@ packages:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.17.1
+    dev: true
+
+  /@opencvjs/types@4.10.0-release.4:
+    resolution: {integrity: sha512-++5j7MQ2/oDgeKIXVpR9j0f5WN9kJKHMgytmZxOro8cNbV3ORYZFjJQwrxkZ6w7KoKh1mWkGQJ0JHL/w4FiqnQ==}
     dev: true
 
   /@pkgjs/parseargs@0.11.0:
