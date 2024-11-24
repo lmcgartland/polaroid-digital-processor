@@ -1,28 +1,38 @@
-### This is a work in progress!
-After scanning hundreds of Polaroids manually and doing lightweight post-processing in the photos app (rotation/crop/sharpening), I figured it was time to automate the process. This script is my first try at utilizing OpenCV to automatically extract the Polaroids from a single scanned image file. If you have any issues, please open an issue on Github and I'll do my best to help resolve it. PRs are also welcome!
+# create-svelte
 
-## Getting started
-**Requirements: Python 3**
+Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/main/packages/create-svelte).
 
-Create virtual environment
-`python3 -m venv env`
-Activate virtual env
-`source env/bin/activate`
+## Creating a project
 
-Install deps
-`pip install -r requirements.txt`
+If you're seeing this, you've probably already done this step. Congrats!
 
-Note on M1 Mac I was only able to get OpenCV installed using:
-`arch -arm64 python3 -m pip install --no-cache --force-reinstall opencv-python`
+```bash
+# create a new project in the current directory
+npm create svelte@latest
 
-### Usage
-Use a flatbed scanner to scan Polaroids at 400dpi. Replace hardcoded path to file in script to your file.
+# create a new project in my-app
+npm create svelte@latest my-app
+```
 
-Run script `python3 main.py`
+## Developing
 
-Your individual images should appear in the `/out` directory
+Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 
-## Future
+```bash
+npm run dev
 
-- Rewrite using OpenCV JS for deployment to browser and make tool more accessible.
-- CLI interface
+# or start the server and open the app in a new browser tab
+npm run dev -- --open
+```
+
+## Building
+
+To create a production version of your app:
+
+```bash
+npm run build
+```
+
+You can preview the production build with `npm run preview`.
+
+> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
