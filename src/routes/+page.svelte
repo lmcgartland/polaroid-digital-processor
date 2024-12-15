@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
 	import JSZip from 'jszip';
 	import { onMount } from 'svelte';
 	import workerURL from '$lib/worker.ts?url';
@@ -9,7 +8,7 @@
 	let input: HTMLInputElement;
 	let previewImageData: string | undefined;
 	let srcImage: string | ArrayBuffer | null;
-	let worker: Worker = new Worker(workerURL);
+	let worker: Worker;
 
 	let fileOutputCanvas: HTMLCanvasElement;
 
@@ -17,6 +16,7 @@
 	let extractedPolaroids: Blob[] = [];
 
 	onMount(() => {
+		worker = new Worker(workerURL);
 		worker.onmessage = (event: MessageEvent<WorkerMessageEvent>) => {
 			// console.log('WORKER MESSAGE', event);
 			switch (event.data.type) {
