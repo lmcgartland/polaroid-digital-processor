@@ -1,7 +1,6 @@
 <script lang="ts">
 	import JSZip from 'jszip';
 	import { onMount } from 'svelte';
-	import workerURL from '$lib/worker.ts?url';
 	import type { WorkerMessageEvent } from '$lib/workerTypes';
 
 	let isReady: boolean = false;
@@ -15,8 +14,9 @@
 	// Data for extracted polaroids
 	let extractedPolaroids: Blob[] = [];
 
-	onMount(() => {
-		worker = new Worker(workerURL);
+	onMount(async() => {
+		const MyWorker = await import('$lib/worker.ts?worker');
+		worker = new MyWorker.default(); 
 		worker.onmessage = (event: MessageEvent<WorkerMessageEvent>) => {
 			// console.log('WORKER MESSAGE', event);
 			switch (event.data.type) {
