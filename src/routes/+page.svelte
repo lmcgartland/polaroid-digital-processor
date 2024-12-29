@@ -7,7 +7,6 @@
 	let input: HTMLInputElement;
 	let previewImageData: string | undefined;
 	let originalImageData: string | undefined;
-	let srcImage: string | ArrayBuffer | null;
 	let worker: Worker;
 
 	let fileOutputCanvas: HTMLCanvasElement;
@@ -97,17 +96,23 @@
 			link.click();
 		});
 	}
+
+	function resetState() {
+		previewImageData = undefined;
+		originalImageData = undefined;
+		extractedPolaroids = [];
+	}
 </script>
 
 {#if isReady}
 	<div class="w-full h-screen flex">
 		<!-- Left Column - Image Input/Output -->
-		<div class="w-1/2 h-full p-4 flex flex-col">
-			<section>
+		<div class="w-1/2 h-screen p-4 flex flex-col">
+			<!-- Preview section with flex-grow -->
+			<section class="flex-grow min-h-0 overflow-auto">
 				{#if previewImageData}
-					<div class="flex flex-col gap-4">
-						<img id="preview" src={previewImageData} alt="Uploaded Image" />
-						<!-- <canvas id="canvasOutput" /> -->
+					<div class="h-full flex flex-col gap-4">
+						<img id="preview" src={previewImageData} alt="Uploaded Image" class="max-h-full object-contain" />
 					</div>
 				{:else}
 					<div class="flex flex-col items-center justify-center h-full">
@@ -118,22 +123,21 @@
 				{/if}
 			</section>
 
-			{#if extractedPolaroids.length > 0}
-				<section class="mt-4">
+			<!-- Fixed height thumbnails section -->
+				<section class="h-[100px] mt-4 overflow-auto">
 					<div class="flex flex-row flex-wrap gap-2">
 						{#each extractedPolaroids as polaroid, i}
 							{@const polaroidURL = URL.createObjectURL(polaroid)}
 							<img class="w-24 h-auto" src={polaroidURL} alt="Polaroid" />
 						{/each}
 					</div>
-					<button 
-						on:click={downloadImages}
-						class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-					>
-						Download images
-					</button>
 				</section>
-			{/if}
+				<button 
+					on:click={downloadImages}
+					class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+				>
+					Download images
+				</button>
 		</div>
 
 		<!-- Right Column - Controls -->
@@ -326,14 +330,20 @@
 					</div>
 				</div>
 
-				{#if previewImageData}
+				<div class="flex gap-2 mt-6">
 					<button 
 						on:click={processImage}
-						class="mt-6 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 w-full"
+						class="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
 					>
-						Reprocess Image
+						Process Image
 					</button>
-				{/if}
+					<button 
+						on:click={resetState}
+						class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+					>
+						Reset
+					</button>
+				</div>
 			</section>
 		</div>
 	</div>
