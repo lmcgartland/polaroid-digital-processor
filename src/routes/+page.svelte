@@ -15,8 +15,9 @@
 	let extractedPolaroids: Blob[] = [];
 
 	onMount(async() => {
-		const MyWorker = await import('$lib/worker.ts?worker');
-		worker = new MyWorker.default(); 
+		// const MyWorker = await import('$lib/worker.ts?worker', {type: 'classic'});
+		worker =  await new Worker(new URL('$lib/worker.ts?worker', import.meta.url), {type: 'classic'}) 
+		// worker = new MyWorker.default(); 
 		worker.onmessage = (event: MessageEvent<WorkerMessageEvent>) => {
 			// console.log('WORKER MESSAGE', event);
 			switch (event.data.type) {
