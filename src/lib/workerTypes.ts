@@ -8,9 +8,19 @@ type ReadyWorkerEvent = BaseWorkerEvent & {
     type: 'WORKER READY';
 };
 
+export interface ProcessImageParams {
+    medianBlurKernel?: number;
+    thresholdValue?: number;
+    structuringElementSize?: number;
+    distanceTransformThreshold?: number;
+    surfaceAreaToleranceLow?: number;
+    surfaceAreaToleranceHigh?: number;
+}
+
 type ProcessImage = BaseWorkerEvent & {
     type: 'PROCESS IMAGE';
     base64ImageData: string;
+    params: ProcessImageParams;
 };
 
 type ExtractedPolaroids = BaseWorkerEvent & {

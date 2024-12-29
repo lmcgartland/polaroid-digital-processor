@@ -36,7 +36,12 @@ addEventListener("message", (event: MessageEvent<WorkerMessageEvent>) => {
     console.log("RECEIVED MESSAGE FROM MAIN", event);
     switch (event.data.type) {
         case "PROCESS IMAGE":
-            processImage(event.data.base64ImageData);
+            // Reset the extracted polaroids array before processing new image
+            extractedPolaroids = [];
+            processImage(
+                event.data.base64ImageData,
+                event.data.params
+            );
             break;
     }
 });
@@ -61,7 +66,23 @@ async function getImageBitmapForImageData(base64ImageData: string): Promise<Imag
     return img;
 }
 
-async function processImage(base64ImageData: string) {
+async function processImage(
+    base64ImageData: string, 
+    params: ProcessImageParams = {}
+) {
+    // Force garbage collection of any previous cv.Mat objects that might still be in memory
+    self.cv.deleteAllMemoryInstances?.();  // Only if this method exists in your OpenCV build
+    
+    // Default values
+    const {
+        medianBlurKernel = 7,
+        thresholdValue = 100,
+        structuringElementSize = 10,
+        distanceTransformThreshold = 0.9,
+        surfaceAreaToleranceLow = 0.8,
+        surfaceAreaToleranceHigh = 1.2
+    } = params;
+
     // Create a canvas element to draw the image on
     let canvasOutput = new OffscreenCanvas(300, 150);
 
@@ -101,18 +122,18 @@ async function processImage(base64ImageData: string) {
 
     cv.resize(src, src, new cv.Size(newWidth, newHeight), 0, 0, cv.INTER_AREA);
     // Blur the image
-    cv.medianBlur(src, src, 7);
+    cv.medianBlur(src, src, medianBlurKernel);
 
     // Convert to grayscale
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
 
     // Thresholding to isolate Polaroids
-    cv.threshold(gray, gray, 100, 255, cv.THRESH_BINARY);
+    cv.threshold(gray, gray, thresholdValue, 255, cv.THRESH_BINARY);
 
     // Erosion and Dilation to remove noise and get background
 
     // Tweak the structuring element values!!
-    let M = cv.Mat.ones(10, 10, cv.CV_8U); // Increase the size of the structuring element
+    let M = cv.Mat.ones(structuringElementSize, structuringElementSize, cv.CV_8U); // Increase the size of the structuring element
     cv.erode(gray, gray, M);
     cv.dilate(gray, opening, M);
 
@@ -121,7 +142,7 @@ async function processImage(base64ImageData: string) {
     cv.normalize(distTrans, distTrans, 1, 0, cv.NORM_INF);
 
     // Get foreground
-    cv.threshold(distTrans, polaroidsFg, 0.9 * 1, 255, cv.THRESH_BINARY);
+    cv.threshold(distTrans, polaroidsFg, distanceTransformThreshold * 1, 255, cv.THRESH_BINARY);
     polaroidsFg.convertTo(polaroidsFg, cv.CV_8U, 1, 0);
     cv.subtract(opening, polaroidsFg, unknown); // Use 'opening' instead of 'polaroidsBg'
 
@@ -170,8 +191,8 @@ async function processImage(base64ImageData: string) {
         // Discard the large and small contours based on area being larger or smaller than the expected polaroid size
         // 20% tolerance
         if (
-            area > EXPECTED_POLAROID_SURFACE_AREA * 0.8 &&
-            area < EXPECTED_POLAROID_SURFACE_AREA * 1.2
+            area > EXPECTED_POLAROID_SURFACE_AREA * surfaceAreaToleranceLow &&
+            area < EXPECTED_POLAROID_SURFACE_AREA * surfaceAreaToleranceHigh
         ) {
             let rect = cv.minAreaRect(cnt);
             // Make sure the rect is the right way up

@@ -1,11 +1,12 @@
 <script lang="ts">
 	import JSZip from 'jszip';
 	import { onMount } from 'svelte';
-	import type { WorkerMessageEvent } from '$lib/workerTypes';
+	import type { ProcessImageParams, WorkerMessageEvent } from '$lib/workerTypes';
 
 	let isReady: boolean = false;
 	let input: HTMLInputElement;
 	let previewImageData: string | undefined;
+	let originalImageData: string | undefined;
 	let srcImage: string | ArrayBuffer | null;
 	let worker: Worker;
 
@@ -13,6 +14,16 @@
 
 	// Data for extracted polaroids
 	let extractedPolaroids: Blob[] = [];
+
+	// Add parameter controls with default values
+	let params: ProcessImageParams = {
+		medianBlurKernel: 5,
+		thresholdValue: 132,
+		structuringElementSize: 12,
+		distanceTransformThreshold: 0.9,
+		surfaceAreaToleranceLow: 0.8,
+		surfaceAreaToleranceHigh: 1.2
+	};
 
 	onMount(async() => {
 		// const MyWorker = await import('$lib/worker.ts?worker', {type: 'classic'});
@@ -42,16 +53,24 @@
 			if (file) {
 				const reader = new FileReader();
 				reader.addEventListener('load', function () {
-					previewImageData = reader.result as string;
-
-					worker.postMessage({ type: 'PROCESS IMAGE', base64ImageData: reader.result as string });
+					originalImageData = reader.result as string;
+					previewImageData = originalImageData;
+					processImage();
 				});
 
-				// NOTE - data url will not work with TIF files
 				reader.readAsDataURL(file);
-
 				return;
 			}
+		}
+	}
+
+	function processImage() {
+		if (originalImageData) {
+			worker.postMessage({ 
+				type: 'PROCESS IMAGE', 
+				base64ImageData: originalImageData,
+				params
+			});
 		}
 	}
 
@@ -81,31 +100,242 @@
 </script>
 
 {#if isReady}
-	<div class="w-full h-screen flex flex-col items-center justify-center">
-		<section>
-			{#if previewImageData}
-				<div class="flex flex-row">
-					<img id="preview" src={previewImageData} alt="Uploaded Image" />
-					<!-- <canvas id="canvasOutput" /> -->
-				</div>
-			{:else}
-				<h1 class="text-2xl text-center">Upload an image to get started</h1>
-				<br />
-				<input bind:this={input} on:change={onChange} type="file" accept="image/*" />
-			{/if}
-		</section>
+	<div class="w-full h-screen flex">
+		<!-- Left Column - Image Input/Output -->
+		<div class="w-1/2 h-full p-4 flex flex-col">
+			<section>
+				{#if previewImageData}
+					<div class="flex flex-col gap-4">
+						<img id="preview" src={previewImageData} alt="Uploaded Image" />
+						<!-- <canvas id="canvasOutput" /> -->
+					</div>
+				{:else}
+					<div class="flex flex-col items-center justify-center h-full">
+						<h1 class="text-2xl text-center">Upload an image to get started</h1>
+						<br />
+						<input bind:this={input} on:change={onChange} type="file" accept="image/*" />
+					</div>
+				{/if}
+			</section>
 
-		<section>
 			{#if extractedPolaroids.length > 0}
-				<div class="flex flex-row">
-					{#each extractedPolaroids as polaroid, i}
-						{@const polaroidURL = URL.createObjectURL(polaroid)}
-						<img class="w-12 h-auto m-2" src={polaroidURL} alt="Polaroid" />
-					{/each}
-				</div>
-				<button on:click={downloadImages}>Download images</button>
+				<section class="mt-4">
+					<div class="flex flex-row flex-wrap gap-2">
+						{#each extractedPolaroids as polaroid, i}
+							{@const polaroidURL = URL.createObjectURL(polaroid)}
+							<img class="w-24 h-auto" src={polaroidURL} alt="Polaroid" />
+						{/each}
+					</div>
+					<button 
+						on:click={downloadImages}
+						class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+					>
+						Download images
+					</button>
+				</section>
 			{/if}
-		</section>
+		</div>
+
+		<!-- Right Column - Controls -->
+		<div class="w-1/2 h-full p-4 overflow-y-auto bg-gray-50">
+			<section class="mb-4 p-4 border rounded bg-white">
+				<h2 class="text-lg font-bold mb-2">Processing Parameters</h2>
+				<div class="grid grid-cols-1 gap-6">
+					<div>
+						<div class="flex items-start gap-2 mb-1">
+							<button 
+								class="text-gray-500 hover:text-gray-700" 
+								on:click={() => params.showMedianBlurHelp = !params.showMedianBlurHelp}
+							>
+								{params.showMedianBlurHelp ? '▼' : '▶'}
+							</button>
+							<label class="flex items-center gap-2 w-full">
+								<span class="font-medium w-48">Median Blur Kernel:</span>
+								<span class="w-12 text-right">{params.medianBlurKernel}</span>
+								<div class="flex-1 flex justify-end">
+									<input 
+										type="number" 
+										bind:value={params.medianBlurKernel}
+										min="3" 
+										max="15"
+										step="2"
+										class="w-32 border rounded px-2 py-1"
+									/>
+								</div>
+							</label>
+						</div>
+						{#if params.showMedianBlurHelp}
+							<p class="text-sm text-gray-600 ml-6">
+								Controls initial image smoothing. Higher values (must be odd) reduce noise but blur details. 
+								Try increasing if detecting false edges, or decreasing if missing polaroid edges.
+							</p>
+						{/if}
+					</div>
+					
+					<div>
+						<div class="flex items-start gap-2 mb-1">
+							<button 
+								class="text-gray-500 hover:text-gray-700" 
+								on:click={() => params.showThresholdHelp = !params.showThresholdHelp}
+							>
+								{params.showThresholdHelp ? '▼' : '▶'}
+							</button>
+							<label class="flex items-center gap-2 w-full">
+								<span class="font-medium w-48">Threshold Value:</span>
+								<span class="w-12 text-right">{params.thresholdValue}</span>
+								<div class="flex-1 flex justify-end">
+									<input 
+										type="range" 
+										bind:value={params.thresholdValue}
+										min="0" 
+										max="255"
+										class="w-32"
+									/>
+								</div>
+							</label>
+						</div>
+						{#if params.showThresholdHelp}
+							<p class="text-sm text-gray-600 ml-6">
+								Determines how aggressively to separate light and dark areas. Higher values create stronger 
+								contrast between polaroids and background. Adjust based on scan brightness and contrast.
+							</p>
+						{/if}
+					</div>
+
+					<div>
+						<div class="flex items-start gap-2 mb-1">
+							<button 
+								class="text-gray-500 hover:text-gray-700" 
+								on:click={() => params.showStructuringHelp = !params.showStructuringHelp}
+							>
+								{params.showStructuringHelp ? '▼' : '▶'}
+							</button>
+							<label class="flex items-center gap-2 w-full">
+								<span class="font-medium w-48">Structuring Element Size:</span>
+								<span class="w-12 text-right">{params.structuringElementSize}</span>
+								<div class="flex-1 flex justify-end">
+									<input 
+										type="number" 
+										bind:value={params.structuringElementSize}
+										min="3" 
+										max="20"
+										class="w-32 border rounded px-2 py-1"
+									/>
+								</div>
+							</label>
+						</div>
+						{#if params.showStructuringHelp}
+							<p class="text-sm text-gray-600 ml-6">
+								Controls noise removal strength. Larger values help merge broken edges but might connect 
+								nearby polaroids. Increase if polaroids have gaps, decrease if they're merging together.
+							</p>
+						{/if}
+					</div>
+
+					<div>
+						<div class="flex items-start gap-2 mb-1">
+							<button 
+								class="text-gray-500 hover:text-gray-700" 
+								on:click={() => params.showDistanceHelp = !params.showDistanceHelp}
+							>
+								{params.showDistanceHelp ? '▼' : '▶'}
+							</button>
+							<label class="flex items-center gap-2 w-full">
+								<span class="font-medium w-48">Distance Transform:</span>
+								<span class="w-12 text-right">{params.distanceTransformThreshold.toFixed(2)}</span>
+								<div class="flex-1 flex justify-end">
+									<input 
+										type="range" 
+										bind:value={params.distanceTransformThreshold}
+										min="0" 
+										max="1"
+										step="0.05"
+										class="w-32"
+									/>
+								</div>
+							</label>
+						</div>
+						{#if params.showDistanceHelp}
+							<p class="text-sm text-gray-600 ml-6">
+								Affects how polaroids are separated from background. Higher values create stricter separation, 
+								lower values are more lenient. Adjust if polaroids are being cut off or including background.
+							</p>
+						{/if}
+					</div>
+
+					<div>
+						<div class="flex items-start gap-2 mb-1">
+							<button 
+								class="text-gray-500 hover:text-gray-700" 
+								on:click={() => params.showAreaLowHelp = !params.showAreaLowHelp}
+							>
+								{params.showAreaLowHelp ? '▼' : '▶'}
+							</button>
+							<label class="flex items-center gap-2 w-full">
+								<span class="font-medium w-48">Surface Area (Low):</span>
+								<span class="w-12 text-right">{params.surfaceAreaToleranceLow.toFixed(2)}</span>
+								<div class="flex-1 flex justify-end">
+									<input 
+										type="range" 
+										bind:value={params.surfaceAreaToleranceLow}
+										min="0.5" 
+										max="1"
+										step="0.05"
+										class="w-32"
+									/>
+								</div>
+							</label>
+						</div>
+						{#if params.showAreaLowHelp}
+							<p class="text-sm text-gray-600 ml-6">
+								Minimum size multiplier for detected polaroids. Lower values allow smaller detections. 
+								Decrease if missing partial polaroids, but may increase false positives.
+							</p>
+						{/if}
+					</div>
+
+					<div>
+						<div class="flex items-start gap-2 mb-1">
+							<button 
+								class="text-gray-500 hover:text-gray-700" 
+								on:click={() => params.showAreaHighHelp = !params.showAreaHighHelp}
+							>
+								{params.showAreaHighHelp ? '▼' : '▶'}
+							</button>
+							<label class="flex items-center gap-2 w-full">
+								<span class="font-medium w-48">Surface Area (High):</span>
+								<span class="w-12 text-right">{params.surfaceAreaToleranceHigh.toFixed(2)}</span>
+								<div class="flex-1 flex justify-end">
+									<input 
+										type="range" 
+										bind:value={params.surfaceAreaToleranceHigh}
+										min="1" 
+										max="1.5"
+										step="0.05"
+										class="w-32"
+									/>
+								</div>
+							</label>
+						</div>
+						{#if params.showAreaHighHelp}
+							<p class="text-sm text-gray-600 ml-6">
+								Maximum size multiplier for detected polaroids. Higher values allow larger detections. 
+								Increase if missing merged polaroids, but may detect non-polaroid areas.
+							</p>
+						{/if}
+					</div>
+				</div>
+
+				{#if previewImageData}
+					<button 
+						on:click={processImage}
+						class="mt-6 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 w-full"
+					>
+						Reprocess Image
+					</button>
+				{/if}
+			</section>
+		</div>
 	</div>
 {:else}
 	<div class="w-full h-screen flex items-center justify-center">OpenCV is loading...</div>
@@ -121,9 +351,7 @@
 <style>
 	#preview,
 	#canvasOutput {
-		max-width: 400px;
-		max-height: 400px;
-		width: auto;
+		max-width: 100%;
 		height: auto;
 		object-fit: contain;
 	}
@@ -133,5 +361,14 @@
 	}
 	#fileOutputCanvas {
 		display: none;
+	}
+
+	label {
+		display: block;
+		margin-bottom: 0.5rem;
+	}
+
+	input[type="range"] {
+		accent-color: #3b82f6;
 	}
 </style>
