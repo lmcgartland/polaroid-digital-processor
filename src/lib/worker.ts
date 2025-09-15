@@ -21,7 +21,7 @@ self.document = {
 
 
 // Data for extracted polaroids
-let extractedPolaroids: Blob[] = [];
+let extractedPolaroids: ArrayBuffer[] = [];
 
 // Configure the matrix of how polaroids are arranged in image
 let polaroidsWide = 2;
@@ -354,7 +354,8 @@ async function processImage(
 
         // let dataURL = fileOutputCanvas.toDataURL('image/png');
         let dataBlob = await fileOutputCanvas.convertToBlob({ type: 'image/png' });
-        extractedPolaroids.push(dataBlob);
+        let arrayBuffer = await dataBlob.arrayBuffer();
+        extractedPolaroids.push(arrayBuffer);
 
         // Memory cleanup
         originalImage.delete();
@@ -363,9 +364,8 @@ async function processImage(
         extractedPolaroidPoints2.delete();
         M.delete();
         sharpenFilter.delete();
-
-
-        // Send the extracted polaroids to the main thread
-        postStructuredMessage({ type: 'EXTRACTED POLAROIDS', extracted: extractedPolaroids });
     }
+
+    // Send the extracted polaroids to the main thread after all are processed
+    postStructuredMessage({ type: 'EXTRACTED POLAROIDS', extracted: extractedPolaroids, transferable: true }, extractedPolaroids);
 }

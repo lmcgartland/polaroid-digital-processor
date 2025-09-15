@@ -40,7 +40,8 @@
 					isReady = true;
 					break;
 				case 'EXTRACTED POLAROIDS':
-					extractedPolaroids = event.data.extracted;
+					// Convert ArrayBuffer[] back to Blob[]
+					extractedPolaroids = event.data.extracted.map(arrayBuffer => new Blob([arrayBuffer], { type: 'image/png' }));
 					break;
 				case 'UPDATE PREVIEW':
 					const arrayBuffer = event.data.preview;

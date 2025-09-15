@@ -26,14 +26,13 @@ export interface ProcessImageParams {
 type ProcessImage = BaseWorkerEvent & {
     type: 'PROCESS IMAGE';
     imageData: ArrayBuffer;
-    width: number;
-    height: number;
     params: ProcessImageParams;
 };
 
 type ExtractedPolaroids = BaseWorkerEvent & {
     type: 'EXTRACTED POLAROIDS';
-    extracted: Blob[];
+    extracted: ArrayBuffer[];
+    transferable?: boolean;
 };
 
 type UpdatePreview = BaseWorkerEvent & {
