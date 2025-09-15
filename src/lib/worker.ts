@@ -40,6 +40,8 @@ addEventListener("message", (event: MessageEvent<WorkerMessageEvent>) => {
             extractedPolaroids = [];
             processImage(
                 event.data.imageData,
+                event.data.width,
+                event.data.height,
                 event.data.params
             );
             break;
@@ -60,16 +62,19 @@ async function sendPreviewImageToMainThread(canvas: OffscreenCanvas) {
     postStructuredMessage({ type: "UPDATE PREVIEW", preview: arrayBuffer, transferable: true }, [arrayBuffer]);
 }
 
-async function getImageBitmapForArrayBuffer(arrayBuffer: ArrayBuffer): Promise<ImageBitmap> {
-    // Create an image bitmap using createImageBitmap() for the array buffer data
-    // This gets around us not having access to Image() in worker
-    const blob = new Blob([arrayBuffer], { type: 'image/jpeg' });
-    let img = await createImageBitmap(blob);
-    return img;
+function createMatFromTextureData(arrayBuffer: ArrayBuffer, width: number, height: number): any {
+    // Create ImageData from the texture data (RGBA format)
+    const uint8Array = new Uint8ClampedArray(arrayBuffer);
+    const imageData = new ImageData(uint8Array, width, height);
+    
+    // Create cv.Mat directly from ImageData (zero-copy)
+    return self.cv.matFromImageData(imageData);
 }
 
 async function processImage(
     imageData: ArrayBuffer, 
+    width: number,
+    height: number,
     params: ProcessImageParams = {}
 ) {
     // Force garbage collection of any previous cv.Mat objects that might still be in memory
@@ -90,10 +95,8 @@ async function processImage(
 
     let cv: typeof OpenCV = self.cv;
 
-    // Have cv read the image from memory without referencing the dom id
-    let image = await getImageBitmapForArrayBuffer(imageData);
-    //@ts-ignore
-    let src = cv.imread(image);
+    // Create cv.Mat directly from texture data (zero-copy)
+    let src = createMatFromTextureData(imageData, width, height);
     let dst = new cv.Mat();
     let gray = new cv.Mat();
     let opening = new cv.Mat();
@@ -276,9 +279,8 @@ async function processImage(
             polaroid.points[j].y /= resizeHeightRatio;
         }
 
-        // Create a new cv Mat of the original input image
-        let image = await getImageBitmapForArrayBuffer(imageData);
-        let originalImage = cv.imread(image as any);
+        // Create a new cv Mat of the original input image (zero-copy)
+        let originalImage = createMatFromTextureData(imageData, width, height);
         // Extract the polaroid from the original image using the points as the four corners of the polaroid
         let extractedPolaroid = new cv.Mat();
         let extractedPolaroidPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [

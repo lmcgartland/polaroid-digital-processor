@@ -26,6 +26,8 @@ export interface ProcessImageParams {
 type ProcessImage = BaseWorkerEvent & {
     type: 'PROCESS IMAGE';
     imageData: ArrayBuffer;
+    width: number;
+    height: number;
     params: ProcessImageParams;
 };
 

@@ -6,9 +6,12 @@
 
 	let isReady: boolean = false;
 	let input: HTMLInputElement;
+	let previewImage: HTMLImageElement;
 	let previewImageData: string | undefined;
 	let originalImageData: string | undefined;
 	let originalImageArrayBuffer: ArrayBuffer | undefined;
+	let originalImageWidth: number | undefined;
+	let originalImageHeight: number | undefined;
 	let worker: Worker;
 
 	let fileOutputCanvas: HTMLCanvasElement;
@@ -54,32 +57,60 @@
 			const file = input.files[0];
 
 			if (file) {
-				// Read as ArrayBuffer for worker
-				const arrayBufferReader = new FileReader();
-				arrayBufferReader.addEventListener('load', function () {
-					originalImageArrayBuffer = arrayBufferReader.result as ArrayBuffer;
-				});
-
 				// Read as DataURL for preview
 				const dataURLReader = new FileReader();
 				dataURLReader.addEventListener('load', function () {
 					originalImageData = dataURLReader.result as string;
 					previewImageData = originalImageData;
-					processImage();
 				});
 
-				arrayBufferReader.readAsArrayBuffer(file);
 				dataURLReader.readAsDataURL(file);
 				return;
 			}
 		}
 	}
 
+	// This is the fastest way to extract the image texture from the preview image
+	// WebGL is 2x slower in testing
+	async function extractImageTextureFromPreview() {
+		if (!previewImage) return;
+
+		// Store dimensions from the already loaded image
+		originalImageWidth = previewImage.naturalWidth;
+		originalImageHeight = previewImage.naturalHeight;
+
+		// Fastest approach: Use ImageBitmap with OffscreenCanvas
+		// This avoids DOM canvas creation and uses the most efficient path
+		const imageBitmap = await createImageBitmap(previewImage);
+		
+		// Use OffscreenCanvas for maximum performance
+		const offscreenCanvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
+		const ctx = offscreenCanvas.getContext('2d');
+		
+		if (ctx) {
+			// Draw the ImageBitmap to the offscreen canvas
+			ctx.drawImage(imageBitmap, 0, 0);
+			
+			// Get ImageData (RGBA format) - this is the decoded texture data
+			const imageData = ctx.getImageData(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+			
+			// Convert ImageData to ArrayBuffer
+			originalImageArrayBuffer = imageData.data.buffer.slice(imageData.data.byteOffset, imageData.data.byteOffset + imageData.data.byteLength);
+		}
+		
+		// Clean up the ImageBitmap
+		imageBitmap.close();
+	}
+
 	function processImage() {
-		if (originalImageArrayBuffer) {
+		extractImageTextureFromPreview();
+
+		if (originalImageArrayBuffer && originalImageWidth && originalImageHeight) {
 			worker.postMessage({ 
 				type: 'PROCESS IMAGE', 
 				imageData: originalImageArrayBuffer,
+				width: originalImageWidth,
+				height: originalImageHeight,
 				params
 			}, [originalImageArrayBuffer]);
 		}
@@ -113,7 +144,10 @@
 		previewImageData = undefined;
 		originalImageData = undefined;
 		originalImageArrayBuffer = undefined;
+		originalImageWidth = undefined;
+		originalImageHeight = undefined;
 		extractedPolaroids = [];
+		// Note: previewImage will be automatically updated when previewImageData changes
 	}
 </script>
 
@@ -125,7 +159,7 @@
 			<section class="flex-grow min-h-0 overflow-auto">
 				{#if previewImageData}
 					<div class="h-full flex flex-col gap-4">
-						<img id="preview" src={previewImageData} alt="Uploaded Image" class="max-h-full object-contain" />
+						<img bind:this={previewImage} id="preview" src={previewImageData} alt="Uploaded Image" class="max-h-full object-contain"/>
 					</div>
 				{:else}
 					<div class="flex flex-col items-center justify-center h-full">
