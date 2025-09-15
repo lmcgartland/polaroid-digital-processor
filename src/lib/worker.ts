@@ -57,7 +57,7 @@ self.cv.onRuntimeInitialized = () => {
 async function sendPreviewImageToMainThread(canvas: OffscreenCanvas) {
     const blob = await canvas.convertToBlob();
     const arrayBuffer = await blob.arrayBuffer();
-    postStructuredMessage({ type: "UPDATE PREVIEW", preview: arrayBuffer }, [arrayBuffer]);
+    postStructuredMessage({ type: "UPDATE PREVIEW", preview: arrayBuffer, transferable: true }, [arrayBuffer]);
 }
 
 async function getImageBitmapForArrayBuffer(arrayBuffer: ArrayBuffer): Promise<ImageBitmap> {

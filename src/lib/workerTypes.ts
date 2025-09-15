@@ -37,6 +37,7 @@ type ExtractedPolaroids = BaseWorkerEvent & {
 type UpdatePreview = BaseWorkerEvent & {
     type: 'UPDATE PREVIEW';
     preview: ArrayBuffer;
+    transferable?: boolean;
 };
 
 export type WorkerMessageEvent = ReadyWorkerEvent | ProcessImage | ExtractedPolaroids | UpdatePreview;

@@ -43,6 +43,7 @@
 					const arrayBuffer = event.data.preview;
 					const blob = new Blob([arrayBuffer], { type: 'image/png' });
 					previewImageData = URL.createObjectURL(blob);
+					// ArrayBuffer is transferred, so we don't need to clean it up
 					break;
 			}
 		};
