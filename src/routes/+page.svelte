@@ -1,4 +1,5 @@
 <script lang="ts">
+	// @ts-ignore
 	import JSZip from 'jszip';
 	import { onMount } from 'svelte';
 	import type { ProcessImageParams, WorkerMessageEvent } from '$lib/workerTypes';
@@ -7,6 +8,7 @@
 	let input: HTMLInputElement;
 	let previewImageData: string | undefined;
 	let originalImageData: string | undefined;
+	let originalImageArrayBuffer: ArrayBuffer | undefined;
 	let worker: Worker;
 
 	let fileOutputCanvas: HTMLCanvasElement;
@@ -38,7 +40,8 @@
 					extractedPolaroids = event.data.extracted;
 					break;
 				case 'UPDATE PREVIEW':
-					const blob = event.data.preview;
+					const arrayBuffer = event.data.preview;
+					const blob = new Blob([arrayBuffer], { type: 'image/png' });
 					previewImageData = URL.createObjectURL(blob);
 					break;
 			}
@@ -50,26 +53,34 @@
 			const file = input.files[0];
 
 			if (file) {
-				const reader = new FileReader();
-				reader.addEventListener('load', function () {
-					originalImageData = reader.result as string;
+				// Read as ArrayBuffer for worker
+				const arrayBufferReader = new FileReader();
+				arrayBufferReader.addEventListener('load', function () {
+					originalImageArrayBuffer = arrayBufferReader.result as ArrayBuffer;
+				});
+
+				// Read as DataURL for preview
+				const dataURLReader = new FileReader();
+				dataURLReader.addEventListener('load', function () {
+					originalImageData = dataURLReader.result as string;
 					previewImageData = originalImageData;
 					processImage();
 				});
 
-				reader.readAsDataURL(file);
+				arrayBufferReader.readAsArrayBuffer(file);
+				dataURLReader.readAsDataURL(file);
 				return;
 			}
 		}
 	}
 
 	function processImage() {
-		if (originalImageData) {
+		if (originalImageArrayBuffer) {
 			worker.postMessage({ 
 				type: 'PROCESS IMAGE', 
-				base64ImageData: originalImageData,
+				imageData: originalImageArrayBuffer,
 				params
-			});
+			}, [originalImageArrayBuffer]);
 		}
 	}
 
@@ -89,7 +100,7 @@
 		}
 
 		// Download the zip by clicking a link
-		zip.generateAsync({ type: 'blob' }).then(function (content) {
+		zip.generateAsync({ type: 'blob' }).then(function (content: Blob) {
 			const link = document.createElement('a');
 			link.href = URL.createObjectURL(content);
 			link.download = 'polaroids.zip';
@@ -100,6 +111,7 @@
 	function resetState() {
 		previewImageData = undefined;
 		originalImageData = undefined;
+		originalImageArrayBuffer = undefined;
 		extractedPolaroids = [];
 	}
 </script>
@@ -246,7 +258,7 @@
 							</button>
 							<label class="flex items-center gap-2 w-full">
 								<span class="font-medium w-48">Distance Transform:</span>
-								<span class="w-12 text-right">{params.distanceTransformThreshold.toFixed(2)}</span>
+								<span class="w-12 text-right">{(params.distanceTransformThreshold ?? 0.9).toFixed(2)}</span>
 								<div class="flex-1 flex justify-end">
 									<input 
 										type="range" 
@@ -277,7 +289,7 @@
 							</button>
 							<label class="flex items-center gap-2 w-full">
 								<span class="font-medium w-48">Surface Area (Low):</span>
-								<span class="w-12 text-right">{params.surfaceAreaToleranceLow.toFixed(2)}</span>
+								<span class="w-12 text-right">{(params.surfaceAreaToleranceLow ?? 0.8).toFixed(2)}</span>
 								<div class="flex-1 flex justify-end">
 									<input 
 										type="range" 
@@ -308,7 +320,7 @@
 							</button>
 							<label class="flex items-center gap-2 w-full">
 								<span class="font-medium w-48">Surface Area (High):</span>
-								<span class="w-12 text-right">{params.surfaceAreaToleranceHigh.toFixed(2)}</span>
+								<span class="w-12 text-right">{(params.surfaceAreaToleranceHigh ?? 1.2).toFixed(2)}</span>
 								<div class="flex-1 flex justify-end">
 									<input 
 										type="range" 
@@ -359,8 +371,7 @@
 <!-- END HIDDEN ELEMENTS -->
 
 <style>
-	#preview,
-	#canvasOutput {
+	#preview {
 		max-width: 100%;
 		height: auto;
 		object-fit: contain;

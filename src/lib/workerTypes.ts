@@ -15,11 +15,17 @@ export interface ProcessImageParams {
     distanceTransformThreshold?: number;
     surfaceAreaToleranceLow?: number;
     surfaceAreaToleranceHigh?: number;
+    showMedianBlurHelp?: boolean;
+    showThresholdHelp?: boolean;
+    showStructuringHelp?: boolean;
+    showDistanceHelp?: boolean;
+    showAreaLowHelp?: boolean;
+    showAreaHighHelp?: boolean;
 }
 
 type ProcessImage = BaseWorkerEvent & {
     type: 'PROCESS IMAGE';
-    base64ImageData: string;
+    imageData: ArrayBuffer;
     params: ProcessImageParams;
 };
 
@@ -30,7 +36,7 @@ type ExtractedPolaroids = BaseWorkerEvent & {
 
 type UpdatePreview = BaseWorkerEvent & {
     type: 'UPDATE PREVIEW';
-    preview: Blob;
+    preview: ArrayBuffer;
 };
 
 export type WorkerMessageEvent = ReadyWorkerEvent | ProcessImage | ExtractedPolaroids | UpdatePreview;

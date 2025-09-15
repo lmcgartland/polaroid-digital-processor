@@ -1,6 +1,6 @@
 /// <reference lib="webworker" /> 
 
-import type { WorkerMessageEvent } from "./workerTypes";
+import type { WorkerMessageEvent, ProcessImageParams } from "./workerTypes";
 import type { OpenCV } from "@opencvjs/types";
 
 interface WorkerGlobalScope {
@@ -39,15 +39,15 @@ addEventListener("message", (event: MessageEvent<WorkerMessageEvent>) => {
             // Reset the extracted polaroids array before processing new image
             extractedPolaroids = [];
             processImage(
-                event.data.base64ImageData,
+                event.data.imageData,
                 event.data.params
             );
             break;
     }
 });
 
-function postStructuredMessage(message: WorkerMessageEvent) {
-    self.postMessage(message);
+function postStructuredMessage(message: WorkerMessageEvent, transferList?: Transferable[]) {
+    self.postMessage(message, transferList || []);
 }
 
 self.cv.onRuntimeInitialized = () => {
@@ -56,18 +56,20 @@ self.cv.onRuntimeInitialized = () => {
 
 async function sendPreviewImageToMainThread(canvas: OffscreenCanvas) {
     const blob = await canvas.convertToBlob();
-    postStructuredMessage({ type: "UPDATE PREVIEW", preview: blob });
+    const arrayBuffer = await blob.arrayBuffer();
+    postStructuredMessage({ type: "UPDATE PREVIEW", preview: arrayBuffer }, [arrayBuffer]);
 }
 
-async function getImageBitmapForImageData(base64ImageData: string): Promise<ImageBitmap> {
-    // Create an image bitmap using createImageBitmap() for the image data
+async function getImageBitmapForArrayBuffer(arrayBuffer: ArrayBuffer): Promise<ImageBitmap> {
+    // Create an image bitmap using createImageBitmap() for the array buffer data
     // This gets around us not having access to Image() in worker
-    let img = await fetch(base64ImageData).then(response => response.blob()).then(blob => createImageBitmap(blob));
+    const blob = new Blob([arrayBuffer], { type: 'image/jpeg' });
+    let img = await createImageBitmap(blob);
     return img;
 }
 
 async function processImage(
-    base64ImageData: string, 
+    imageData: ArrayBuffer, 
     params: ProcessImageParams = {}
 ) {
     // Force garbage collection of any previous cv.Mat objects that might still be in memory
@@ -89,7 +91,7 @@ async function processImage(
     let cv: typeof OpenCV = self.cv;
 
     // Have cv read the image from memory without referencing the dom id
-    let image = await getImageBitmapForImageData(base64ImageData);
+    let image = await getImageBitmapForArrayBuffer(imageData);
     //@ts-ignore
     let src = cv.imread(image);
     let dst = new cv.Mat();
@@ -173,7 +175,7 @@ async function processImage(
     }
 
     // Display the result
-    cv.imshow(canvasOutput, src);
+    cv.imshow(canvasOutput as any, src);
     sendPreviewImageToMainThread(canvasOutput);
 
     // Find the rectangles in the barriers
@@ -204,6 +206,7 @@ async function processImage(
             }
 
             // Get the four corner points of the rectangle
+            // @ts-ignore
             let points = cv.RotatedRect.points(rect);
 
             // Check that the center of the rectangle is not inside any of the previous rectangles
@@ -243,7 +246,7 @@ async function processImage(
     }
 
     // Draw the rectangles on the image
-    cv.imshow(canvasOutput, src);
+    cv.imshow(canvasOutput as any, src);
     sendPreviewImageToMainThread(canvasOutput);
 
     // Memory cleanup
@@ -274,8 +277,8 @@ async function processImage(
         }
 
         // Create a new cv Mat of the original input image
-        let image = await getImageBitmapForImageData(base64ImageData);
-        let originalImage = cv.imread(image);
+        let image = await getImageBitmapForArrayBuffer(imageData);
+        let originalImage = cv.imread(image as any);
         // Extract the polaroid from the original image using the points as the four corners of the polaroid
         let extractedPolaroid = new cv.Mat();
         let extractedPolaroidPoints = cv.matFromArray(4, 1, cv.CV_32FC2, [
@@ -345,7 +348,7 @@ async function processImage(
 
         // Draw the extracted polaroid with the warp applied to the canvas
         let fileOutputCanvas = new OffscreenCanvas(extractedPolaroidWidth, extractedPolaroidHeight);
-        cv.imshow(fileOutputCanvas, extractedPolaroid);
+        cv.imshow(fileOutputCanvas as any, extractedPolaroid);
 
         // let dataURL = fileOutputCanvas.toDataURL('image/png');
         let dataBlob = await fileOutputCanvas.convertToBlob({ type: 'image/png' });
