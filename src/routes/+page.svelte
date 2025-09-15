@@ -63,6 +63,16 @@
 				dataURLReader.addEventListener('load', function () {
 					originalImageData = dataURLReader.result as string;
 					previewImageData = originalImageData;
+
+					// Create a new image element and wait for it to load
+					const image = new Image();
+					image.onload = () => {
+						processImage(image);
+					};
+					image.onerror = () => {
+						console.error('Failed to load image');
+					};
+					image.src = originalImageData;
 				});
 
 				dataURLReader.readAsDataURL(file);
@@ -73,16 +83,20 @@
 
 	// This is the fastest way to extract the image texture from the preview image
 	// WebGL is 2x slower in testing
-	async function extractImageTextureFromPreview() {
-		if (!previewImage) return;
-
+	async function extractImageTextureFromPreview(image: HTMLImageElement) {
+		
+		// Ensure the image is fully loaded
+		if (!image.complete || image.naturalWidth === 0 || image.naturalHeight === 0) {
+			throw new Error('Image is not fully loaded');
+		}
+		
 		// Store dimensions from the already loaded image
-		originalImageWidth = previewImage.naturalWidth;
-		originalImageHeight = previewImage.naturalHeight;
+		originalImageWidth = image.naturalWidth;
+		originalImageHeight = image.naturalHeight;
 
 		// Fastest approach: Use ImageBitmap with OffscreenCanvas
 		// This avoids DOM canvas creation and uses the most efficient path
-		const imageBitmap = await createImageBitmap(previewImage);
+		const imageBitmap = await createImageBitmap(image);
 		
 		// Use OffscreenCanvas for maximum performance
 		const offscreenCanvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
@@ -103,17 +117,22 @@
 		imageBitmap.close();
 	}
 
-	function processImage() {
-		extractImageTextureFromPreview();
+	async function processImage(image: HTMLImageElement) {
+		try {
+			await extractImageTextureFromPreview(image);
 
-		if (originalImageArrayBuffer && originalImageWidth && originalImageHeight) {
-			worker.postMessage({ 
-				type: 'PROCESS IMAGE', 
-				imageData: originalImageArrayBuffer,
-				width: originalImageWidth,
-				height: originalImageHeight,
-				params
-			}, [originalImageArrayBuffer]);
+			if (originalImageArrayBuffer && originalImageWidth && originalImageHeight) {
+				worker.postMessage({ 
+					type: 'PROCESS IMAGE', 
+					imageData: originalImageArrayBuffer,
+					width: originalImageWidth,
+					height: originalImageHeight,
+					params
+				}, [originalImageArrayBuffer]);
+			}
+		} catch (error) {
+			console.error('Error processing image:', error);
+			// You might want to show a user-friendly error message here
 		}
 	}
 
@@ -380,7 +399,7 @@
 
 				<div class="flex gap-2 mt-6">
 					<button 
-						on:click={processImage}
+						on:click={() => processImage(previewImage)}
 						class="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
 					>
 						Process Image
