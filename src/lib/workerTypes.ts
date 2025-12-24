@@ -31,7 +31,8 @@ type ProcessImage = BaseWorkerEvent & {
 
 type ExtractedPolaroids = BaseWorkerEvent & {
     type: 'EXTRACTED POLAROIDS';
-    extracted: Blob[];
+    extracted: ArrayBuffer[];
+    transferable?: boolean;
 };
 
 type UpdatePreview = BaseWorkerEvent & {

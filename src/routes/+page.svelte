@@ -6,9 +6,12 @@
 
 	let isReady: boolean = false;
 	let input: HTMLInputElement;
+	let previewImage: HTMLImageElement;
 	let previewImageData: string | undefined;
 	let originalImageData: string | undefined;
 	let originalImageArrayBuffer: ArrayBuffer | undefined;
+	let originalImageWidth: number | undefined;
+	let originalImageHeight: number | undefined;
 	let worker: Worker;
 
 	let fileOutputCanvas: HTMLCanvasElement;
@@ -37,7 +40,8 @@
 					isReady = true;
 					break;
 				case 'EXTRACTED POLAROIDS':
-					extractedPolaroids = event.data.extracted;
+					// Convert ArrayBuffer[] back to Blob[]
+					extractedPolaroids = event.data.extracted.map(arrayBuffer => new Blob([arrayBuffer], { type: 'image/png' }));
 					break;
 				case 'UPDATE PREVIEW':
 					const arrayBuffer = event.data.preview;
@@ -54,34 +58,81 @@
 			const file = input.files[0];
 
 			if (file) {
-				// Read as ArrayBuffer for worker
-				const arrayBufferReader = new FileReader();
-				arrayBufferReader.addEventListener('load', function () {
-					originalImageArrayBuffer = arrayBufferReader.result as ArrayBuffer;
-				});
-
 				// Read as DataURL for preview
 				const dataURLReader = new FileReader();
 				dataURLReader.addEventListener('load', function () {
 					originalImageData = dataURLReader.result as string;
 					previewImageData = originalImageData;
-					processImage();
+
+					// Create a new image element and wait for it to load
+					const image = new Image();
+					image.onload = () => {
+						processImage(image);
+					};
+					image.onerror = () => {
+						console.error('Failed to load image');
+					};
+					image.src = originalImageData;
 				});
 
-				arrayBufferReader.readAsArrayBuffer(file);
 				dataURLReader.readAsDataURL(file);
 				return;
 			}
 		}
 	}
 
-	function processImage() {
-		if (originalImageArrayBuffer) {
-			worker.postMessage({ 
-				type: 'PROCESS IMAGE', 
-				imageData: originalImageArrayBuffer,
-				params
-			}, [originalImageArrayBuffer]);
+	// This is the fastest way to extract the image texture from the preview image
+	// WebGL is 2x slower in testing
+	async function extractImageTextureFromPreview(image: HTMLImageElement) {
+		
+		// Ensure the image is fully loaded
+		if (!image.complete || image.naturalWidth === 0 || image.naturalHeight === 0) {
+			throw new Error('Image is not fully loaded');
+		}
+		
+		// Store dimensions from the already loaded image
+		originalImageWidth = image.naturalWidth;
+		originalImageHeight = image.naturalHeight;
+
+		// Fastest approach: Use ImageBitmap with OffscreenCanvas
+		// This avoids DOM canvas creation and uses the most efficient path
+		const imageBitmap = await createImageBitmap(image);
+		
+		// Use OffscreenCanvas for maximum performance
+		const offscreenCanvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
+		const ctx = offscreenCanvas.getContext('2d');
+		
+		if (ctx) {
+			// Draw the ImageBitmap to the offscreen canvas
+			ctx.drawImage(imageBitmap, 0, 0);
+			
+			// Get ImageData (RGBA format) - this is the decoded texture data
+			const imageData = ctx.getImageData(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+			
+			// Convert ImageData to ArrayBuffer
+			originalImageArrayBuffer = imageData.data.buffer.slice(imageData.data.byteOffset, imageData.data.byteOffset + imageData.data.byteLength);
+		}
+		
+		// Clean up the ImageBitmap
+		imageBitmap.close();
+	}
+
+	async function processImage(image: HTMLImageElement) {
+		try {
+			await extractImageTextureFromPreview(image);
+
+			if (originalImageArrayBuffer && originalImageWidth && originalImageHeight) {
+				worker.postMessage({ 
+					type: 'PROCESS IMAGE', 
+					imageData: originalImageArrayBuffer,
+					width: originalImageWidth,
+					height: originalImageHeight,
+					params
+				}, [originalImageArrayBuffer]);
+			}
+		} catch (error) {
+			console.error('Error processing image:', error);
+			// You might want to show a user-friendly error message here
 		}
 	}
 
@@ -113,7 +164,10 @@
 		previewImageData = undefined;
 		originalImageData = undefined;
 		originalImageArrayBuffer = undefined;
+		originalImageWidth = undefined;
+		originalImageHeight = undefined;
 		extractedPolaroids = [];
+		// Note: previewImage will be automatically updated when previewImageData changes
 	}
 </script>
 
@@ -125,7 +179,7 @@
 			<section class="flex-grow min-h-0 overflow-auto">
 				{#if previewImageData}
 					<div class="h-full flex flex-col gap-4">
-						<img id="preview" src={previewImageData} alt="Uploaded Image" class="max-h-full object-contain" />
+						<img bind:this={previewImage} id="preview" src={previewImageData} alt="Uploaded Image" class="max-h-full object-contain"/>
 					</div>
 				{:else}
 					<div class="flex flex-col items-center justify-center h-full">
@@ -345,7 +399,7 @@
 
 				<div class="flex gap-2 mt-6">
 					<button 
-						on:click={processImage}
+						on:click={() => processImage(previewImage)}
 						class="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
 					>
 						Process Image
