@@ -9,28 +9,38 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test": "vitest",
+		"test:browser": "playwright test",
+		"test:baselines": "tsx scripts/generate-baselines.ts",
 		"lint": "prettier --check .",
 		"format": "prettier --write ."
 	},
 	"devDependencies": {
 		"@opencvjs/types": "4.10.0-release.4",
+		"@playwright/test": "^1.57.0",
 		"@sveltejs/adapter-auto": "^3.0.0",
 		"@sveltejs/kit": "^2.0.0",
 		"@sveltejs/vite-plugin-svelte": "^3.0.0",
+		"@vitest/browser": "^4.0.16",
 		"autoprefixer": "^10.4.17",
+		"imghash": "^1.1.2",
+		"jimp": "^1.6.0",
+		"playwright": "^1.57.0",
 		"postcss": "^8.4.35",
 		"prettier": "^3.1.1",
 		"prettier-plugin-svelte": "^3.1.2",
 		"svelte": "^4.2.7",
 		"svelte-check": "^3.6.0",
 		"tailwindcss": "^3.4.1",
+		"ts-morph": "^27.0.2",
 		"tslib": "^2.4.1",
+		"tsx": "^4.21.0",
 		"typescript": "^5.0.0",
 		"vite": "^5.0.3",
-		"vitest": "^1.2.0"
+		"vitest": "^4.0.16"
 	},
 	"type": "module",
 	"dependencies": {
-		"jszip": "^3.10.1"
+		"jszip": "^3.10.1",
+		"mermaid": "^11.12.2"
 	}
 }

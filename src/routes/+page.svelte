@@ -172,224 +172,220 @@
 </script>
 
 {#if isReady}
-	<div class="w-full h-screen flex">
+	<div class="app-container">
 		<!-- Left Column - Image Input/Output -->
-		<div class="w-1/2 h-screen p-4 flex flex-col">
+		<div class="preview-column">
 			<!-- Preview section with flex-grow -->
-			<section class="flex-grow min-h-0 overflow-auto">
+			<section class="preview-section">
 				{#if previewImageData}
-					<div class="h-full flex flex-col gap-4">
-						<img bind:this={previewImage} id="preview" src={previewImageData} alt="Uploaded Image" class="max-h-full object-contain"/>
+					<div class="preview-wrapper">
+						<img bind:this={previewImage} id="preview" src={previewImageData} alt="Uploaded Image" class="preview-image"/>
 					</div>
 				{:else}
-					<div class="flex flex-col items-center justify-center h-full">
-						<h1 class="text-2xl text-center">Upload an image to get started</h1>
-						<br />
-						<input bind:this={input} on:change={onChange} type="file" accept="image/*" />
+					<div class="upload-prompt">
+						<h1 class="upload-title">Upload an image to get started</h1>
+						<input bind:this={input} on:change={onChange} type="file" accept="image/*" class="file-input" />
 					</div>
 				{/if}
 			</section>
 
 			<!-- Fixed height thumbnails section -->
-				<section class="h-[100px] mt-4 overflow-auto">
-					<div class="flex flex-row flex-wrap gap-2">
-						{#each extractedPolaroids as polaroid, i}
-							{@const polaroidURL = URL.createObjectURL(polaroid)}
-							<img class="w-24 h-auto" src={polaroidURL} alt="Polaroid" />
-						{/each}
-					</div>
-				</section>
-				<button 
-					on:click={downloadImages}
-					class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-				>
-					Download images
-				</button>
+			<section class="thumbnails-section">
+				<div class="thumbnails-grid">
+					{#each extractedPolaroids as polaroid, i}
+						{@const polaroidURL = URL.createObjectURL(polaroid)}
+						<img class="thumbnail" src={polaroidURL} alt="Polaroid {i + 1}" />
+					{/each}
+				</div>
+			</section>
+			<button on:click={downloadImages} class="btn btn-primary download-btn">
+				Download images
+			</button>
 		</div>
 
 		<!-- Right Column - Controls -->
-		<div class="w-1/2 h-full p-4 overflow-y-auto bg-gray-50">
-			<section class="mb-4 p-4 border rounded bg-white">
-				<h2 class="text-lg font-bold mb-2">Processing Parameters</h2>
-				<div class="grid grid-cols-1 gap-6">
-					<div>
-						<div class="flex items-start gap-2 mb-1">
+		<div class="controls-column">
+			<section class="controls-card">
+				<h2 class="controls-title">Processing Parameters</h2>
+				<div class="params-grid">
+					<div class="param-group">
+						<div class="param-header">
 							<button 
-								class="text-gray-500 hover:text-gray-700" 
+								class="expand-btn" 
 								on:click={() => params.showMedianBlurHelp = !params.showMedianBlurHelp}
 							>
 								{params.showMedianBlurHelp ? '▼' : '▶'}
 							</button>
-							<label class="flex items-center gap-2 w-full">
-								<span class="font-medium w-48">Median Blur Kernel:</span>
-								<span class="w-12 text-right">{params.medianBlurKernel}</span>
-								<div class="flex-1 flex justify-end">
+							<label class="param-label">
+								<span class="param-name">Median Blur Kernel:</span>
+								<span class="param-value">{params.medianBlurKernel}</span>
+								<div class="param-input-wrapper">
 									<input 
 										type="number" 
 										bind:value={params.medianBlurKernel}
 										min="3" 
 										max="15"
 										step="2"
-										class="w-32 border rounded px-2 py-1"
+										class="input-number"
 									/>
 								</div>
 							</label>
 						</div>
 						{#if params.showMedianBlurHelp}
-							<p class="text-sm text-gray-600 ml-6">
+							<p class="param-help">
 								Controls initial image smoothing. Higher values (must be odd) reduce noise but blur details. 
 								Try increasing if detecting false edges, or decreasing if missing polaroid edges.
 							</p>
 						{/if}
 					</div>
 					
-					<div>
-						<div class="flex items-start gap-2 mb-1">
+					<div class="param-group">
+						<div class="param-header">
 							<button 
-								class="text-gray-500 hover:text-gray-700" 
+								class="expand-btn" 
 								on:click={() => params.showThresholdHelp = !params.showThresholdHelp}
 							>
 								{params.showThresholdHelp ? '▼' : '▶'}
 							</button>
-							<label class="flex items-center gap-2 w-full">
-								<span class="font-medium w-48">Threshold Value:</span>
-								<span class="w-12 text-right">{params.thresholdValue}</span>
-								<div class="flex-1 flex justify-end">
+							<label class="param-label">
+								<span class="param-name">Threshold Value:</span>
+								<span class="param-value">{params.thresholdValue}</span>
+								<div class="param-input-wrapper">
 									<input 
 										type="range" 
 										bind:value={params.thresholdValue}
 										min="0" 
 										max="255"
-										class="w-32"
+										class="input-range"
 									/>
 								</div>
 							</label>
 						</div>
 						{#if params.showThresholdHelp}
-							<p class="text-sm text-gray-600 ml-6">
+							<p class="param-help">
 								Determines how aggressively to separate light and dark areas. Higher values create stronger 
 								contrast between polaroids and background. Adjust based on scan brightness and contrast.
 							</p>
 						{/if}
 					</div>
 
-					<div>
-						<div class="flex items-start gap-2 mb-1">
+					<div class="param-group">
+						<div class="param-header">
 							<button 
-								class="text-gray-500 hover:text-gray-700" 
+								class="expand-btn" 
 								on:click={() => params.showStructuringHelp = !params.showStructuringHelp}
 							>
 								{params.showStructuringHelp ? '▼' : '▶'}
 							</button>
-							<label class="flex items-center gap-2 w-full">
-								<span class="font-medium w-48">Structuring Element Size:</span>
-								<span class="w-12 text-right">{params.structuringElementSize}</span>
-								<div class="flex-1 flex justify-end">
+							<label class="param-label">
+								<span class="param-name">Structuring Element Size:</span>
+								<span class="param-value">{params.structuringElementSize}</span>
+								<div class="param-input-wrapper">
 									<input 
 										type="number" 
 										bind:value={params.structuringElementSize}
 										min="3" 
 										max="20"
-										class="w-32 border rounded px-2 py-1"
+										class="input-number"
 									/>
 								</div>
 							</label>
 						</div>
 						{#if params.showStructuringHelp}
-							<p class="text-sm text-gray-600 ml-6">
+							<p class="param-help">
 								Controls noise removal strength. Larger values help merge broken edges but might connect 
 								nearby polaroids. Increase if polaroids have gaps, decrease if they're merging together.
 							</p>
 						{/if}
 					</div>
 
-					<div>
-						<div class="flex items-start gap-2 mb-1">
+					<div class="param-group">
+						<div class="param-header">
 							<button 
-								class="text-gray-500 hover:text-gray-700" 
+								class="expand-btn" 
 								on:click={() => params.showDistanceHelp = !params.showDistanceHelp}
 							>
 								{params.showDistanceHelp ? '▼' : '▶'}
 							</button>
-							<label class="flex items-center gap-2 w-full">
-								<span class="font-medium w-48">Distance Transform:</span>
-								<span class="w-12 text-right">{(params.distanceTransformThreshold ?? 0.9).toFixed(2)}</span>
-								<div class="flex-1 flex justify-end">
+							<label class="param-label">
+								<span class="param-name">Distance Transform:</span>
+								<span class="param-value">{(params.distanceTransformThreshold ?? 0.9).toFixed(2)}</span>
+								<div class="param-input-wrapper">
 									<input 
 										type="range" 
 										bind:value={params.distanceTransformThreshold}
 										min="0" 
 										max="1"
 										step="0.05"
-										class="w-32"
+										class="input-range"
 									/>
 								</div>
 							</label>
 						</div>
 						{#if params.showDistanceHelp}
-							<p class="text-sm text-gray-600 ml-6">
+							<p class="param-help">
 								Affects how polaroids are separated from background. Higher values create stricter separation, 
 								lower values are more lenient. Adjust if polaroids are being cut off or including background.
 							</p>
 						{/if}
 					</div>
 
-					<div>
-						<div class="flex items-start gap-2 mb-1">
+					<div class="param-group">
+						<div class="param-header">
 							<button 
-								class="text-gray-500 hover:text-gray-700" 
+								class="expand-btn" 
 								on:click={() => params.showAreaLowHelp = !params.showAreaLowHelp}
 							>
 								{params.showAreaLowHelp ? '▼' : '▶'}
 							</button>
-							<label class="flex items-center gap-2 w-full">
-								<span class="font-medium w-48">Surface Area (Low):</span>
-								<span class="w-12 text-right">{(params.surfaceAreaToleranceLow ?? 0.8).toFixed(2)}</span>
-								<div class="flex-1 flex justify-end">
+							<label class="param-label">
+								<span class="param-name">Surface Area (Low):</span>
+								<span class="param-value">{(params.surfaceAreaToleranceLow ?? 0.8).toFixed(2)}</span>
+								<div class="param-input-wrapper">
 									<input 
 										type="range" 
 										bind:value={params.surfaceAreaToleranceLow}
 										min="0.5" 
 										max="1"
 										step="0.05"
-										class="w-32"
+										class="input-range"
 									/>
 								</div>
 							</label>
 						</div>
 						{#if params.showAreaLowHelp}
-							<p class="text-sm text-gray-600 ml-6">
+							<p class="param-help">
 								Minimum size multiplier for detected polaroids. Lower values allow smaller detections. 
 								Decrease if missing partial polaroids, but may increase false positives.
 							</p>
 						{/if}
 					</div>
 
-					<div>
-						<div class="flex items-start gap-2 mb-1">
+					<div class="param-group">
+						<div class="param-header">
 							<button 
-								class="text-gray-500 hover:text-gray-700" 
+								class="expand-btn" 
 								on:click={() => params.showAreaHighHelp = !params.showAreaHighHelp}
 							>
 								{params.showAreaHighHelp ? '▼' : '▶'}
 							</button>
-							<label class="flex items-center gap-2 w-full">
-								<span class="font-medium w-48">Surface Area (High):</span>
-								<span class="w-12 text-right">{(params.surfaceAreaToleranceHigh ?? 1.2).toFixed(2)}</span>
-								<div class="flex-1 flex justify-end">
+							<label class="param-label">
+								<span class="param-name">Surface Area (High):</span>
+								<span class="param-value">{(params.surfaceAreaToleranceHigh ?? 1.2).toFixed(2)}</span>
+								<div class="param-input-wrapper">
 									<input 
 										type="range" 
 										bind:value={params.surfaceAreaToleranceHigh}
 										min="1" 
 										max="1.5"
 										step="0.05"
-										class="w-32"
+										class="input-range"
 									/>
 								</div>
 							</label>
 						</div>
 						{#if params.showAreaHighHelp}
-							<p class="text-sm text-gray-600 ml-6">
+							<p class="param-help">
 								Maximum size multiplier for detected polaroids. Higher values allow larger detections. 
 								Increase if missing merged polaroids, but may detect non-polaroid areas.
 							</p>
@@ -397,17 +393,11 @@
 					</div>
 				</div>
 
-				<div class="flex gap-2 mt-6">
-					<button 
-						on:click={() => processImage(previewImage)}
-						class="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-					>
+				<div class="actions-row">
+					<button on:click={() => processImage(previewImage)} class="btn btn-primary flex-1">
 						Process Image
 					</button>
-					<button 
-						on:click={resetState}
-						class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-					>
+					<button on:click={resetState} class="btn btn-secondary">
 						Reset
 					</button>
 				</div>
@@ -415,7 +405,10 @@
 		</div>
 	</div>
 {:else}
-	<div class="w-full h-screen flex items-center justify-center">OpenCV is loading...</div>
+	<div class="loading-container">
+		<div class="loading-spinner"></div>
+		<span class="loading-text">Loading OpenCV...</span>
+	</div>
 {/if}
 
 <!-- HIDDEN ELEMENTS -->
@@ -426,25 +419,340 @@
 <!-- END HIDDEN ELEMENTS -->
 
 <style>
-	#preview {
-		max-width: 100%;
-		height: auto;
-		object-fit: contain;
+	/* Layout */
+	.app-container {
+		display: flex;
+		width: 100%;
+		min-height: calc(100vh - 57px);
 	}
 
-	#inputImage {
-		display: none;
+	.preview-column {
+		width: 50%;
+		padding: 1.5rem;
+		display: flex;
+		flex-direction: column;
+		background: var(--bg-primary);
+		border-right: 1px solid var(--border-primary);
 	}
+
+	.controls-column {
+		width: 50%;
+		padding: 1.5rem;
+		overflow-y: auto;
+		background: var(--bg-secondary);
+	}
+
+	/* Preview Section */
+	.preview-section {
+		flex: 1;
+		min-height: 0;
+		overflow: auto;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.preview-wrapper {
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.preview-image {
+		max-width: 100%;
+		max-height: 100%;
+		object-fit: contain;
+		border-radius: 0.5rem;
+	}
+
+	.upload-prompt {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		height: 100%;
+		gap: 1.5rem;
+		padding: 2rem;
+		border: 2px dashed var(--border-secondary);
+		border-radius: 1rem;
+		background: var(--bg-secondary);
+	}
+
+	.upload-title {
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: var(--text-primary);
+		text-align: center;
+	}
+
+	.file-input {
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+	}
+
+	.file-input::file-selector-button {
+		padding: 0.5rem 1rem;
+		margin-right: 1rem;
+		border: 1px solid var(--border-primary);
+		border-radius: 0.375rem;
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	.file-input::file-selector-button:hover {
+		background: var(--bg-hover);
+		border-color: var(--border-secondary);
+	}
+
+	/* Thumbnails */
+	.thumbnails-section {
+		height: 100px;
+		margin-top: 1rem;
+		overflow: auto;
+		background: var(--bg-secondary);
+		border-radius: 0.5rem;
+		padding: 0.5rem;
+	}
+
+	.thumbnails-grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.thumbnail {
+		width: 5rem;
+		height: auto;
+		border-radius: 0.25rem;
+		border: 1px solid var(--border-primary);
+	}
+
+	/* Controls Card */
+	.controls-card {
+		background: var(--bg-card);
+		border: 1px solid var(--border-primary);
+		border-radius: 0.75rem;
+		padding: 1.5rem;
+	}
+
+	.controls-title {
+		font-size: 1.25rem;
+		font-weight: 700;
+		color: var(--text-primary);
+		margin-bottom: 1.5rem;
+		padding-bottom: 0.75rem;
+		border-bottom: 1px solid var(--border-primary);
+	}
+
+	/* Parameter Groups */
+	.params-grid {
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+	}
+
+	.param-group {
+		padding-bottom: 1.25rem;
+		border-bottom: 1px solid var(--border-primary);
+	}
+
+	.param-group:last-child {
+		border-bottom: none;
+		padding-bottom: 0;
+	}
+
+	.param-header {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+
+	.expand-btn {
+		padding: 0.25rem;
+		color: var(--text-muted);
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-size: 0.75rem;
+		transition: color 0.15s;
+	}
+
+	.expand-btn:hover {
+		color: var(--text-primary);
+	}
+
+	.param-label {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		width: 100%;
+	}
+
+	.param-name {
+		font-weight: 500;
+		color: var(--text-primary);
+		width: 12rem;
+		flex-shrink: 0;
+	}
+
+	.param-value {
+		width: 3rem;
+		text-align: right;
+		color: var(--text-secondary);
+		font-family: 'JetBrains Mono', monospace;
+		font-size: 0.875rem;
+	}
+
+	.param-input-wrapper {
+		flex: 1;
+		display: flex;
+		justify-content: flex-end;
+	}
+
+	.param-help {
+		font-size: 0.8125rem;
+		color: var(--text-muted);
+		margin-left: 1.75rem;
+		margin-top: 0.5rem;
+		line-height: 1.5;
+		padding: 0.75rem;
+		background: var(--bg-tertiary);
+		border-radius: 0.375rem;
+		border-left: 3px solid var(--accent-blue);
+	}
+
+	/* Inputs */
+	.input-number {
+		width: 5rem;
+		padding: 0.375rem 0.5rem;
+		border: 1px solid var(--border-primary);
+		border-radius: 0.375rem;
+		background: var(--bg-primary);
+		color: var(--text-primary);
+		font-size: 0.875rem;
+		transition: border-color 0.15s;
+	}
+
+	.input-number:focus {
+		outline: none;
+		border-color: var(--accent-blue);
+	}
+
+	.input-range {
+		width: 8rem;
+		accent-color: var(--accent-blue);
+	}
+
+	/* Buttons */
+	.btn {
+		padding: 0.625rem 1.25rem;
+		border-radius: 0.5rem;
+		font-weight: 600;
+		font-size: 0.875rem;
+		cursor: pointer;
+		transition: all 0.15s;
+		border: none;
+	}
+
+	.btn-primary {
+		background: var(--accent-blue);
+		color: white;
+	}
+
+	.btn-primary:hover {
+		filter: brightness(1.1);
+	}
+
+	.btn-secondary {
+		background: var(--bg-tertiary);
+		color: var(--text-primary);
+		border: 1px solid var(--border-primary);
+	}
+
+	.btn-secondary:hover {
+		background: var(--bg-hover);
+	}
+
+	.download-btn {
+		margin-top: 0.75rem;
+		width: 100%;
+	}
+
+	.actions-row {
+		display: flex;
+		gap: 0.75rem;
+		margin-top: 1.5rem;
+	}
+
+	.flex-1 {
+		flex: 1;
+	}
+
+	/* Loading State */
+	.loading-container {
+		width: 100%;
+		min-height: calc(100vh - 57px);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 1rem;
+		background: var(--bg-primary);
+	}
+
+	.loading-spinner {
+		width: 2.5rem;
+		height: 2.5rem;
+		border: 3px solid var(--border-primary);
+		border-top-color: var(--accent-blue);
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.loading-text {
+		color: var(--text-secondary);
+		font-size: 1rem;
+	}
+
+	/* Hidden elements */
+	#inputImage,
 	#fileOutputCanvas {
 		display: none;
 	}
 
-	label {
-		display: block;
-		margin-bottom: 0.5rem;
-	}
+	/* Responsive */
+	@media (max-width: 1024px) {
+		.app-container {
+			flex-direction: column;
+		}
 
-	input[type="range"] {
-		accent-color: #3b82f6;
+		.preview-column,
+		.controls-column {
+			width: 100%;
+		}
+
+		.preview-column {
+			border-right: none;
+			border-bottom: 1px solid var(--border-primary);
+			min-height: 50vh;
+		}
+
+		.param-label {
+			flex-wrap: wrap;
+		}
+
+		.param-name {
+			width: 100%;
+		}
 	}
 </style>

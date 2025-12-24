@@ -8,3 +8,11 @@ node_modules
 !.env.example
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Generated documentation
+src/lib/docs/
+
+# Test outputs
+/test-results/
+/playwright-report/
+src/tests/fixtures.generated.ts
