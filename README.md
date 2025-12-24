@@ -127,4 +127,4 @@ Visit `/docs` in the running app to view:
 MIT
 
 ## Note on settings
-This has only been tested/optimized for scanning integral Polaroid film on an Epson v60 scanner at 600 ppi.
+This has only been tested/optimized for scanning integral Polaroid film on an Epson v39 scanner at 600 ppi.
