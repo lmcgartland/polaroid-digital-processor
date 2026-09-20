@@ -36,12 +36,19 @@ export interface TestFixture {
  */
 export const testFixtures: TestFixture[] = [
   {
-    folder: '/Users/lukemcgartland/Pictures/macki/raw',
+    folder: '/Users/lukemcgartland/Pictures/scans',
     images: [
-      { filename: 'lux_snacks_1.png', expectedCount: 4 },
-      { filename: 'lux_snacks_1 1.png', expectedCount: 4 },
-      { filename: 'lux_snacks_1 2.png', expectedCount: 4 },
-      { filename: 'lux_snacks_1 3.png', expectedCount: 4 },
+      { filename: 'bahamas.png', expectedCount: 4 },
+      { filename: 'bahamas 1.png', expectedCount: 1 },
+      { filename: 'lbff.png', expectedCount: 4 },
+      { filename: 'lbff 1.png', expectedCount: 4 },
+      { filename: 'maddi_wedding.png', expectedCount: 4 },
+      { filename: 'maddi_wedding 1.png', expectedCount: 4 },
+      { filename: 'maddi_wedding 2.png', expectedCount: 4 },
+      { filename: 'maddi_wedding 3.png', expectedCount: 4 },
+      { filename: 'maddi_wedding 4.png', expectedCount: 4 },
+      { filename: 'maddi_wedding 5.png', expectedCount: 4 },
+      { filename: 'maddi_wedding 6.png', expectedCount: 4 },
     ]
   }
 ];

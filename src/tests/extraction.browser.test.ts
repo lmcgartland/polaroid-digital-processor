@@ -18,7 +18,7 @@ import * as path from 'path';
  * Wait for OpenCV to be ready (indicated by the upload UI appearing).
  */
 async function waitForOpenCVReady(page: Page): Promise<void> {
-  // Wait for the "Upload an image to get started" text or file input
+  // Wait for the start screen's file input
   await page.waitForSelector('input[type="file"]', { timeout: 30000 });
 }
 
@@ -40,7 +40,7 @@ async function waitForProcessingComplete(page: Page, expectedCount: number): Pro
   // We'll wait for img elements in the thumbnails area
   
   // First, wait for at least one thumbnail to appear (processing started)
-  await page.waitForSelector('.thumbnails-grid img, .thumbnails-section img, section img.thumbnail', { 
+  await page.waitForSelector('.thumbnails-grid .thumbnail', { 
     timeout: 60000 
   });
   
@@ -55,24 +55,19 @@ async function waitForProcessingComplete(page: Page, expectedCount: number): Pro
  * Get the extracted polaroid images as Blobs.
  */
 async function getExtractedPolaroids(page: Page): Promise<Buffer[]> {
-  // Get all thumbnail image sources
-  const thumbnails = await page.locator('.thumbnails-grid img, .thumbnail').all();
+  // Thumbnails are canvases (the PNGs are only encoded on download), so read them back as PNG
+  const thumbnails = await page.locator('canvas.thumbnail').all();
   const buffers: Buffer[] = [];
-  
+
   for (const thumbnail of thumbnails) {
-    const src = await thumbnail.getAttribute('src');
-    if (src && src.startsWith('blob:')) {
-      // Fetch the blob URL content
-      const buffer = await page.evaluate(async (blobUrl) => {
-        const response = await fetch(blobUrl);
-        const blob = await response.blob();
-        const arrayBuffer = await blob.arrayBuffer();
-        return Array.from(new Uint8Array(arrayBuffer));
-      }, src);
-      buffers.push(Buffer.from(buffer));
-    }
+    const bytes = await thumbnail.evaluate(async (canvas: HTMLCanvasElement) => {
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Failed to encode thumbnail');
+      return Array.from(new Uint8Array(await blob.arrayBuffer()));
+    });
+    buffers.push(Buffer.from(bytes));
   }
-  
+
   return buffers;
 }
 
@@ -85,7 +80,7 @@ async function resetApplication(page: Page): Promise<void> {
   if (await resetButton.isVisible()) {
     await resetButton.click();
     // Wait for the upload prompt to reappear
-    await page.waitForSelector('text=Upload an image to get started', { timeout: 5000 }).catch(() => {
+    await page.waitForSelector('text=Drop a scan here', { timeout: 5000 }).catch(() => {
       // If the text doesn't appear, try reloading
     });
   }

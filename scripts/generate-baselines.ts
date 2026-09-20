@@ -98,21 +98,17 @@ async function processImage(page: Page, imagePath: string): Promise<Buffer[]> {
   // Wait a bit more for all images to be fully processed
   await page.waitForTimeout(2000);
 
-  // Get all thumbnail images
-  const thumbnails = await page.locator('.thumbnails-grid img, .thumbnail').all();
+  // Thumbnails are canvases (the PNGs are only encoded on download), so read them back as PNG
+  const thumbnails = await page.locator('canvas.thumbnail').all();
   const buffers: Buffer[] = [];
 
   for (const thumbnail of thumbnails) {
-    const src = await thumbnail.getAttribute('src');
-    if (src && src.startsWith('blob:')) {
-      const buffer = await page.evaluate(async (blobUrl) => {
-        const response = await fetch(blobUrl);
-        const blob = await response.blob();
-        const arrayBuffer = await blob.arrayBuffer();
-        return Array.from(new Uint8Array(arrayBuffer));
-      }, src);
-      buffers.push(Buffer.from(buffer));
-    }
+    const bytes = await thumbnail.evaluate(async (canvas: HTMLCanvasElement) => {
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Failed to encode thumbnail');
+      return Array.from(new Uint8Array(await blob.arrayBuffer()));
+    });
+    buffers.push(Buffer.from(bytes));
   }
 
   return buffers;

@@ -1,25 +1,39 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import './docs.css';
 
 	$: currentPath = $page.url.pathname;
 
+	// Icons are 24x24 stroked paths, drawn the same way as the ones in the app's navigation bar
 	const navSections = [
 		{
 			title: 'Getting Started',
 			items: [
-				{ href: '/docs/how-it-works', label: 'How It Works', icon: '📖' },
-				{ href: '/docs/testing', label: 'Testing Guide', icon: '🧪' }
+				{
+					href: '/docs/how-it-works',
+					label: 'How It Works',
+					icon: 'M12 6.5C10.2 5.2 7.6 4.5 4 4.5v13c3.6 0 6.2.7 8 2 1.8-1.3 4.4-2 8-2v-13c-3.6 0-6.2.7-8 2Zm0 0v13'
+				},
+				{
+					href: '/docs/testing',
+					label: 'Testing Guide',
+					icon: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Zm-3.75 8.75 2.6 2.6 4.9-5.2'
+				}
 			]
 		},
 		{
 			title: 'Reference',
 			items: [
-				{ href: '/docs', label: 'API Reference', icon: '⚙️' }
+				{
+					href: '/docs',
+					label: 'API Reference',
+					icon: 'm8.5 7.5-5 4.5 5 4.5m7-9 5 4.5-5 4.5M13.5 5l-3 14'
+				}
 			]
 		}
 	];
 
-	function isActive(href: string) {
+	function isActive(href: string, currentPath: string) {
 		if (href === '/docs') {
 			return currentPath === '/docs';
 		}
@@ -27,24 +41,10 @@
 	}
 </script>
 
-<svelte:head>
-	<link rel="preconnect" href="https://fonts.googleapis.com" />
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-	<link
-		href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap"
-		rel="stylesheet"
-	/>
-</svelte:head>
-
 <div class="docs-layout">
 	<!-- Primary Sidebar - Navigation between doc pages -->
 	<aside class="primary-sidebar">
 		<div class="sidebar-content">
-			<div class="sidebar-header">
-				<span class="docs-logo">📚</span>
-				<span class="docs-title">Documentation</span>
-			</div>
-
 			{#each navSections as section}
 				<div class="nav-section">
 					<h3 class="nav-section-title">{section.title}</h3>
@@ -53,21 +53,27 @@
 							<a
 								href={item.href}
 								class="nav-item"
-								class:active={isActive(item.href)}
+								class:active={isActive(item.href, currentPath)}
+								aria-current={isActive(item.href, currentPath) ? 'page' : undefined}
 							>
-								<span class="nav-icon">{item.icon}</span>
+								<svg
+									class="nav-icon"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.8"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									aria-hidden="true"
+								>
+									<path d={item.icon} />
+								</svg>
 								<span class="nav-label">{item.label}</span>
 							</a>
 						{/each}
 					</nav>
 				</div>
 			{/each}
-
-			<div class="sidebar-footer">
-				<a href="/" class="back-link">
-					← Back to App
-				</a>
-			</div>
 		</div>
 	</aside>
 
@@ -80,44 +86,27 @@
 <style>
 	.docs-layout {
 		display: grid;
-		grid-template-columns: 220px 1fr;
-		min-height: calc(100vh - 57px);
-		font-family: 'Inter', system-ui, -apple-system, sans-serif;
+		grid-template-columns: 15rem minmax(0, 1fr);
+		min-height: calc(100vh - var(--nav-height));
+		background: var(--bg-primary);
 	}
 
 	/* Primary Sidebar */
 	.primary-sidebar {
-		background: var(--bg-secondary, #18181b);
-		border-right: 1px solid var(--border-primary, #27272a);
 		position: sticky;
-		top: 57px;
-		height: calc(100vh - 57px);
+		top: var(--nav-height);
+		height: calc(100vh - var(--nav-height));
 		overflow-y: auto;
+		border-right: 1px solid var(--border-primary);
+		background: var(--bg-secondary);
+	}
+
+	:global([data-theme='dark']) .primary-sidebar {
+		background: #0d0d0f;
 	}
 
 	.sidebar-content {
-		padding: 1.5rem 1rem;
-		display: flex;
-		flex-direction: column;
-		min-height: 100%;
-	}
-
-	.sidebar-header {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem;
-		margin-bottom: 1.5rem;
-	}
-
-	.docs-logo {
-		font-size: 1.25rem;
-	}
-
-	.docs-title {
-		font-size: 1rem;
-		font-weight: 600;
-		color: var(--text-primary, #fafafa);
+		padding: 1.75rem 0.75rem;
 	}
 
 	.nav-section {
@@ -125,13 +114,13 @@
 	}
 
 	.nav-section-title {
-		font-size: 0.7rem;
+		margin-bottom: 0.375rem;
+		padding: 0 0.75rem;
+		font-size: 0.75rem;
 		font-weight: 600;
+		letter-spacing: 0.02em;
 		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		color: var(--text-muted, #71717a);
-		padding: 0 0.5rem;
-		margin-bottom: 0.5rem;
+		color: var(--text-muted);
 	}
 
 	.nav-list {
@@ -144,67 +133,75 @@
 		display: flex;
 		align-items: center;
 		gap: 0.625rem;
-		padding: 0.5rem 0.75rem;
-		border-radius: 0.375rem;
-		font-size: 0.875rem;
-		color: var(--text-secondary, #a1a1aa);
+		padding: 0.4375rem 0.75rem;
+		border-radius: 0.625rem;
+		font-size: 0.9375rem;
+		letter-spacing: -0.01em;
+		color: var(--text-primary);
 		text-decoration: none;
-		transition: all 0.15s;
+		transition: background 0.2s;
 	}
 
 	.nav-item:hover {
-		background: var(--bg-hover, #27272a);
-		color: var(--text-primary, #fafafa);
+		background: var(--fill);
 	}
 
 	.nav-item.active {
-		background: var(--accent-blue-bg, #1e3a5f);
-		color: var(--accent-blue, #3b82f6);
+		background: var(--accent-blue);
+		color: #ffffff;
 	}
 
 	.nav-icon {
-		font-size: 1rem;
-		width: 1.25rem;
-		text-align: center;
+		width: 1.125rem;
+		height: 1.125rem;
+		flex-shrink: 0;
+		color: var(--accent-blue);
 	}
 
-	.nav-label {
-		font-weight: 500;
-	}
-
-	.sidebar-footer {
-		margin-top: auto;
-		padding-top: 1.5rem;
-		border-top: 1px solid var(--border-primary, #27272a);
-	}
-
-	.back-link {
-		display: block;
-		padding: 0.5rem 0.75rem;
-		font-size: 0.875rem;
-		color: var(--text-muted, #71717a);
-		text-decoration: none;
-		transition: color 0.15s;
-	}
-
-	.back-link:hover {
-		color: var(--text-primary, #fafafa);
+	.nav-item.active .nav-icon {
+		color: inherit;
 	}
 
 	.docs-main {
-		background: var(--bg-primary, #0f0f10);
-		min-height: 100%;
+		min-width: 0;
 	}
 
 	/* Responsive */
-	@media (max-width: 1024px) {
+	@media (max-width: 900px) {
 		.docs-layout {
-			grid-template-columns: 1fr;
+			grid-template-columns: minmax(0, 1fr);
 		}
 
+		/* The pages become a row of pills above the content */
 		.primary-sidebar {
+			position: static;
+			height: auto;
+			border-right: none;
+			border-bottom: 1px solid var(--border-primary);
+		}
+
+		.sidebar-content {
+			display: flex;
+			gap: 0.375rem;
+			padding: 0.625rem 1rem;
+			overflow-x: auto;
+		}
+
+		.nav-section {
+			margin: 0;
+		}
+
+		.nav-section-title {
 			display: none;
+		}
+
+		.nav-list {
+			flex-direction: row;
+			gap: 0.375rem;
+		}
+
+		.nav-item {
+			white-space: nowrap;
 		}
 	}
 </style>
-

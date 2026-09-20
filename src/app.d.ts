@@ -13,6 +13,14 @@ declare global {
 declare global {
 	interface Window {
 		cv: any;
+		// File System Access API (not yet in TypeScript's DOM lib)
+		showDirectoryPicker(options?: {
+			mode?: 'read' | 'readwrite';
+		}): Promise<FileSystemDirectoryHandle>;
+	}
+
+	interface FileSystemHandle {
+		requestPermission(descriptor?: { mode?: 'read' | 'readwrite' }): Promise<PermissionState>;
 	}
 }
 

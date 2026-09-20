@@ -23,21 +23,14 @@
 	<nav class="nav-header">
 		<div class="nav-container">
 			<a href="/" class="nav-brand">
+				<span class="nav-logo" aria-hidden="true"><span></span></span>
 				Polaroid Digital Processor
 			</a>
 			<div class="nav-links">
-				<a
-					href="/"
-					class="nav-link {isHome ? 'nav-link-active' : ''}"
-				>
-					App
-				</a>
-				<a
-					href="/docs"
-					class="nav-link {isDocsPage ? 'nav-link-active' : ''}"
-				>
-					Docs
-				</a>
+				<div class="nav-segments">
+					<a href="/" class="nav-link {isHome ? 'nav-link-active' : ''}">App</a>
+					<a href="/docs" class="nav-link {isDocsPage ? 'nav-link-active' : ''}">Docs</a>
+				</div>
 				<a
 					href="https://github.com/lmcgartland/polaroid-digital-processor"
 					target="_blank"
@@ -87,47 +80,92 @@
 <style>
 	:global(:root) {
 		/* Light theme (default) */
-		--bg-primary: #ffffff;
-		--bg-secondary: #f9fafb;
-		--bg-tertiary: #f3f4f6;
+		--bg-primary: #f5f5f7;
+		--bg-secondary: #ffffff;
+		--bg-tertiary: #e8e8ed;
 		--bg-card: #ffffff;
-		--bg-code: #f3f4f6;
-		--bg-hover: #e5e7eb;
-		
-		--text-primary: #111827;
-		--text-secondary: #4b5563;
-		--text-muted: #9ca3af;
-		
-		--border-primary: #e5e7eb;
-		--border-secondary: #d1d5db;
-		
-		--accent-blue: #2563eb;
-		--accent-blue-bg: #dbeafe;
+		--bg-code: #f0f0f3;
+		--bg-hover: #dcdce1;
+
+		--text-primary: #1d1d1f;
+		--text-secondary: #515154;
+		--text-muted: #86868b;
+
+		--border-primary: rgba(0, 0, 0, 0.08);
+		--border-secondary: rgba(0, 0, 0, 0.16);
+
+		--accent-blue: #0071e3;
+		--accent-blue-hover: #0077ed;
+		--accent-blue-bg: rgba(0, 113, 227, 0.1);
+		--accent-green: #28a745;
+		--accent-orange: #c9730a;
+
+		/* Translucent fill for controls, as in the system's "fill" colours */
+		--fill: rgba(120, 120, 128, 0.12);
+		--fill-strong: rgba(120, 120, 128, 0.2);
+		--nav-bg: rgba(255, 255, 255, 0.72);
+		--knob: #ffffff;
+
+		--shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+		--shadow-raised: 0 2px 4px rgba(0, 0, 0, 0.08), 0 16px 40px rgba(0, 0, 0, 0.14);
+		--shadow-knob: 0 0.5px 1px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.2);
+
+		--nav-height: 52px;
+		--font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display',
+			'Helvetica Neue', 'Segoe UI', Roboto, sans-serif;
+		--font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, monospace;
+		--ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
-	:global([data-theme="dark"]) {
-		--bg-primary: #0f0f10;
-		--bg-secondary: #18181b;
-		--bg-tertiary: #27272a;
-		--bg-card: #18181b;
-		--bg-code: #09090b;
-		--bg-hover: #27272a;
-		
-		--text-primary: #fafafa;
-		--text-secondary: #a1a1aa;
-		--text-muted: #71717a;
-		
-		--border-primary: #27272a;
-		--border-secondary: #3f3f46;
-		
-		--accent-blue: #3b82f6;
-		--accent-blue-bg: #1e3a5f;
+	:global([data-theme='dark']) {
+		--bg-primary: #000000;
+		--bg-secondary: #1c1c1e;
+		--bg-tertiary: #2c2c2e;
+		--bg-card: #1c1c1e;
+		--bg-code: #161618;
+		--bg-hover: #3a3a3c;
+
+		--text-primary: #f5f5f7;
+		--text-secondary: #a1a1a6;
+		--text-muted: #6e6e73;
+
+		--border-primary: rgba(255, 255, 255, 0.1);
+		--border-secondary: rgba(255, 255, 255, 0.18);
+
+		--accent-blue: #0a84ff;
+		--accent-blue-hover: #2b95ff;
+		--accent-blue-bg: rgba(10, 132, 255, 0.16);
+		--accent-green: #30d158;
+		--accent-orange: #ff9f0a;
+
+		--fill: rgba(120, 120, 128, 0.24);
+		--fill-strong: rgba(120, 120, 128, 0.36);
+		--nav-bg: rgba(22, 22, 24, 0.72);
+		--knob: #ffffff;
+
+		--shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06);
+		--shadow-raised: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 20px 50px rgba(0, 0, 0, 0.6);
+		--shadow-knob: 0 0.5px 1px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.4);
 	}
 
 	:global(body) {
 		background: var(--bg-primary);
 		color: var(--text-primary);
-		transition: background-color 0.2s, color 0.2s;
+		font-family: var(--font-sans);
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+		transition:
+			background-color 0.3s,
+			color 0.3s;
+	}
+
+	:global(code) {
+		font-family: var(--font-mono);
+	}
+
+	:global(:focus-visible) {
+		outline: 3px solid color-mix(in srgb, var(--accent-blue) 50%, transparent);
+		outline-offset: 2px;
 	}
 
 	.layout-wrapper {
@@ -137,106 +175,129 @@
 	}
 
 	.nav-header {
-		background: var(--bg-card);
+		height: var(--nav-height);
+		display: flex;
+		align-items: center;
+		padding: 0 1.25rem;
+		background: var(--nav-bg);
+		-webkit-backdrop-filter: saturate(180%) blur(20px);
+		backdrop-filter: saturate(180%) blur(20px);
 		border-bottom: 1px solid var(--border-primary);
-		padding: 0.75rem 1rem;
 		position: sticky;
 		top: 0;
 		z-index: 50;
 	}
 
 	.nav-container {
-		max-width: 100%;
-		margin: 0 auto;
+		width: 100%;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 	}
 
 	.nav-brand {
-		font-size: 1.125rem;
-		font-weight: 700;
+		display: flex;
+		align-items: center;
+		gap: 0.625rem;
+		font-size: 0.9375rem;
+		font-weight: 600;
+		letter-spacing: -0.01em;
 		color: var(--text-primary);
 		text-decoration: none;
-		transition: color 0.15s;
 	}
 
-	.nav-brand:hover {
-		color: var(--accent-blue);
+	/* A tiny polaroid: white frame, picture, thick bottom edge */
+	.nav-logo {
+		width: 20px;
+		height: 24px;
+		padding: 2.5px 2.5px 0;
+		border-radius: 3px;
+		background: #ffffff;
+		box-shadow:
+			0 0 0 0.5px rgba(0, 0, 0, 0.16),
+			0 1px 3px rgba(0, 0, 0, 0.2);
+		transform: rotate(-6deg);
+		transition: transform 0.4s var(--ease-out);
+	}
+
+	.nav-logo span {
+		display: block;
+		height: 15px;
+		border-radius: 1px;
+		background: linear-gradient(135deg, #ff9f0a, #ff375f 55%, #5e5ce6);
+	}
+
+	.nav-brand:hover .nav-logo {
+		transform: rotate(4deg) scale(1.06);
 	}
 
 	.nav-links {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.375rem;
+	}
+
+	/* Segmented control */
+	.nav-segments {
+		display: flex;
+		padding: 2px;
+		margin-right: 0.5rem;
+		border-radius: 9px;
+		background: var(--fill);
 	}
 
 	.nav-link {
-		padding: 0.375rem 0.75rem;
-		border-radius: 0.375rem;
-		font-size: 0.875rem;
+		padding: 0.25rem 0.875rem;
+		border-radius: 7px;
+		font-size: 0.8125rem;
 		font-weight: 500;
-		color: var(--text-secondary);
-		text-decoration: none;
-		transition: all 0.15s;
-	}
-
-	.nav-link:hover {
 		color: var(--text-primary);
-		background: var(--bg-hover);
+		text-decoration: none;
+		transition:
+			background-color 0.2s,
+			box-shadow 0.2s;
 	}
 
 	.nav-link-active {
-		background: var(--accent-blue-bg);
-		color: var(--accent-blue);
+		background: var(--bg-card);
+		box-shadow:
+			0 0 0 0.5px rgba(0, 0, 0, 0.06),
+			0 1px 3px rgba(0, 0, 0, 0.14);
 	}
 
-	.nav-link-active:hover {
-		background: var(--accent-blue-bg);
-		color: var(--accent-blue);
+	:global([data-theme='dark']) .nav-link-active {
+		background: #636366;
 	}
 
-	.github-link {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 36px;
-		height: 36px;
-		border: 1px solid var(--border-primary);
-		border-radius: 0.5rem;
-		background: var(--bg-secondary);
-		color: var(--text-secondary);
-		transition: all 0.15s;
-		margin-left: 0.5rem;
-	}
-
-	.github-link:hover {
-		background: var(--bg-hover);
-		color: var(--text-primary);
-		border-color: var(--border-secondary);
-	}
-
+	.github-link,
 	.theme-toggle {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 36px;
-		height: 36px;
-		border: 1px solid var(--border-primary);
-		border-radius: 0.5rem;
-		background: var(--bg-secondary);
+		width: 32px;
+		height: 32px;
+		border-radius: 50%;
 		color: var(--text-secondary);
 		cursor: pointer;
-		transition: all 0.15s;
+		transition:
+			background-color 0.2s,
+			color 0.2s;
 	}
 
+	.github-link:hover,
 	.theme-toggle:hover {
-		background: var(--bg-hover);
+		background: var(--fill);
 		color: var(--text-primary);
-		border-color: var(--border-secondary);
 	}
 
 	.main-content {
 		flex: 1;
+	}
+
+	@media (max-width: 640px) {
+		.nav-brand {
+			font-size: 0;
+			gap: 0;
+		}
 	}
 </style>
